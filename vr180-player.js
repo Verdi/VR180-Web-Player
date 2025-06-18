@@ -81,8 +81,8 @@ const SOUND_MUTED_SVG_PATH = "M6.9082 2.8985C7.71639 2.45747 8.74994 3.03437 8.7
 
 document.addEventListener('DOMContentLoaded', () => {
 	videoElement = document.getElementById('vrVideo');
-	enterVrBtn = document.getElementById('enterVrBtn');
 	videoInfoDiv = document.getElementById('video-info');
+	enterVrBtn = document.getElementById('enterVrBtn');
 
 	if (videoElement) {
 		videoElement.style.display = 'none';
@@ -117,13 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
 				init();
 			} else {
 				enterVrBtn.dataset.xrSupported = "false";
-				if (enterVrBtn) enterVrBtn.style.display = 'none';
+				enterVrBtn.disabled = true;
 				// If VR is not supported, ensure video-info remains hidden
 				if (videoInfoDiv) videoInfoDiv.style.display = 'none';
 			}
 		}).catch(err => {
 			console.error("XR Support Check Error:", err);
-			if (enterVrBtn) enterVrBtn.style.display = 'none';
+			enterVrBtn.disabled = true;
 			// On error, ensure video-info remains hidden
 			if (videoInfoDiv) videoInfoDiv.style.display = 'none';
 		});
@@ -131,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		// If navigator.xr itself is not available, VR is not supported
 		if (enterVrBtn) {
 			enterVrBtn.disabled = true;
-			enterVrBtn.style.display = 'none';
 		}
 		// Ensure video-info remains hidden
 		if (videoInfoDiv) videoInfoDiv.style.display = 'none';
@@ -872,7 +871,9 @@ async function actualSessionToggle() {
 			isXrLoopActive = true;
 			renderer.setAnimationLoop(renderXR);
 
-			if (enterVrBtn) enterVrBtn.textContent = 'Exit VR';
+			if (enterVrBtn) {
+				enterVrBtn.textContent = enterVrBtn.dataset.enterVrText;
+			}
 			frameCounter = 0;
 			lastFadeTimestamp = performance.now();
 
@@ -964,7 +965,10 @@ function onVRSessionEnd(event) {
 		xrSession = null;
 	} else if (xrSession && endedSession) {
 		console.warn("onVRSessionEnd: Global xrSession was different from the endedSession. Global xrSession:", xrSession, "Ended session:", endedSession);
-		xrSession = null; 
+		xrSession = null;
+	}
+	if (enterVrBtn) {
+		enterVrBtn.textContent = enterVrBtn.dataset.enterVrText;
 	}
 
 
