@@ -971,7 +971,6 @@ function onVRSessionEnd(event) {
 		enterVrBtn.textContent = enterVrBtn.dataset.enterVrText;
 	}
 
-
 	onWindowResize();
 }
 
