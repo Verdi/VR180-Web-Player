@@ -7,15 +7,13 @@ Got an immersive video you want people to see with the Apple Vision Pro or Meta 
 Add the player script `<script type="module" src="vr180-player.js"></script>` before the closing body tag and use this HTML snippet: 
 ```
 <div id="player-container">
-	<div id="video-info" style="display: none;"><!-- You can put whatever you like in this div. It's only shown when VR is available. -->
-		<video id="vrVideo" controls crossOrigin="anonymous" playsinline webkit-playsinline>
-			<source src="REPLACE_THIS.mp4" type="video/mp4">`
-		</video>
-		<button id="enterVrBtn">Enter VR</button>
-	</div>
+	<video id="vrVideo" title="VR180 Video" controls crossOrigin="anonymous" playsinline webkit-playsinline>
+		<source src="REPLACE_THIS.mp4" type="video/mp4">
+	</video>
 </div>
+<button id="enterVrBtn">Enter VR</button>
 ```
-When VR is available, the page will display a button (and anything else you include inside `<div id="video-info">`) to begin the immersive experience. 
+When VR is available, the page will display an active button to begin the immersive experience. The button will be disabled when VR is not available. 
 
 <img src="https://github.com/user-attachments/assets/05db6208-6d42-48fa-a0da-55de41f35e6d" width=50%>
 
@@ -38,7 +36,7 @@ Tapping anywhere will bring up the controls. Without interaction they will go aw
 - Exit VR
 
 ## Future
-I'm not a developer. I used Google's Gemini to help create this and give me the ability to post immersive videos on my website. I'm unlikely to be able to help you if you run into problems, want to customize this, or add new features. I'm releasing this with the [unlicense](https://unlicense.org/) so you're free to do anything at all with it. That said, if you have ideas or want to contribute code, I'd love to [hear](mailto:hello@michaelverdi.com) from you.
+I'm an artist not a developer. I used AI to help create this and give me the ability to post immersive videos on my website. I'm unlikely to be able to help you if you run into problems, want to customize this, or add new features. I'm releasing this with the [unlicense](https://unlicense.org/) so you're free to do anything at all with it. That said, if you have ideas or want to contribute code, I'd love to [hear](mailto:hello@michaelverdi.com) from you.
 
 ## Demo
 **Test it out in a headset!**
