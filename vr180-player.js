@@ -5,7 +5,7 @@ let vr180Mesh;
 let xrSession = null;
 let controller1, raycaster, uiElements = [];
 const tempMatrix = new THREE.Matrix4();
-let videoElement, enterVrBtn, videoInfoDiv;
+let videoElement, enterVrBtn;
 let frameCounter = 0;
 
 let isXrLoopActive = false;
@@ -81,23 +81,15 @@ const SOUND_MUTED_SVG_PATH = "M6.9082 2.8985C7.71639 2.45747 8.74994 3.03437 8.7
 
 document.addEventListener('DOMContentLoaded', () => {
 	videoElement = document.getElementById('vrVideo');
-	videoInfoDiv = document.getElementById('video-info');
 	enterVrBtn = document.getElementById('enterVrBtn');
 
 	if (videoElement) {
 		videoElement.style.display = 'none';
 	}
-	// Initially hide video-info. It will be shown if VR is supported.
-	if (videoInfoDiv) {
-		 videoInfoDiv.style.display = 'none';
-	}
 
 	if (!videoElement || !enterVrBtn) {
 		console.error("CRITICAL_ERROR_DOM: Essential HTML elements (video or VR button) not found.");
 		return;
-	}
-	if (!videoInfoDiv) {
-		console.warn("WARN_DOM: video-info div not found. Video info will not be displayed.");
 	}
 
 	enterVrBtn.disabled = true;
@@ -109,31 +101,20 @@ document.addEventListener('DOMContentLoaded', () => {
 		navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
 			if (supported) {
 				enterVrBtn.dataset.xrSupported = "true";
-				// If VR is supported, show the video-info div on the 2D page
-				if (videoInfoDiv) {
-					console.log("VR is supported, showing video-info.");
-					videoInfoDiv.style.display = 'block';
-				}
 				init();
 			} else {
 				enterVrBtn.dataset.xrSupported = "false";
 				enterVrBtn.disabled = true;
-				// If VR is not supported, ensure video-info remains hidden
-				if (videoInfoDiv) videoInfoDiv.style.display = 'none';
 			}
 		}).catch(err => {
 			console.error("XR Support Check Error:", err);
 			enterVrBtn.disabled = true;
-			// On error, ensure video-info remains hidden
-			if (videoInfoDiv) videoInfoDiv.style.display = 'none';
 		});
 	} else {
 		// If navigator.xr itself is not available, VR is not supported
 		if (enterVrBtn) {
 			enterVrBtn.disabled = true;
 		}
-		// Ensure video-info remains hidden
-		if (videoInfoDiv) videoInfoDiv.style.display = 'none';
 	}
 });
 
@@ -343,7 +324,7 @@ function init() {
 		const textureCornerRadius = FIGMA_CORNER_RADIUS_PX * (PANEL_TEXTURE_WIDTH / FIGMA_PANEL_WIDTH_PX);
 		drawRoundedRect(panelCtx, 0, 0, PANEL_TEXTURE_WIDTH, PANEL_TEXTURE_HEIGHT, textureCornerRadius, true, false);
 
-		const videoTitle = videoElement.querySelector('source')?.src.split('/').pop()?.split('.')[0].replace(/-/g, ' ') || "Video Title";
+		const videoTitle = videoElement.getAttribute('title') || videoElement.querySelector('source')?.src.split('/').pop()?.split('.')[0].replace(/-/g, ' ') || "Video Title";
 		const titleFontSizeTexturePx = Math.round(FIGMA_TITLE_FONT_SIZE_PX * (PANEL_TEXTURE_HEIGHT / FIGMA_PANEL_HEIGHT_PX));
 		panelCtx.fillStyle = '#ffffff';
 		panelCtx.font = `500 ${titleFontSizeTexturePx}px Helvetica, Arial, sans-serif`;
@@ -823,12 +804,6 @@ async function actualSessionToggle() {
 			xrSession = session; 
 			xrSession.addEventListener('end', onVRSessionEnd); 
 
-			// Ensure video-info is visible when entering VR, if it exists
-			if (videoInfoDiv) {
-				console.log("Entering VR, ensuring video-info is visible.");
-				videoInfoDiv.style.display = 'block';
-			}
-
 
 			if (video && (video.paused || video.ended)) {
 				try {
@@ -870,10 +845,6 @@ async function actualSessionToggle() {
 			await renderer.xr.setSession(xrSession);
 			isXrLoopActive = true;
 			renderer.setAnimationLoop(renderXR);
-
-			if (enterVrBtn) {
-				enterVrBtn.textContent = enterVrBtn.dataset.enterVrText;
-			}
 			frameCounter = 0;
 			lastFadeTimestamp = performance.now();
 
@@ -881,13 +852,6 @@ async function actualSessionToggle() {
 			const sessionStartError = "XR_ERROR: Failed to start VR session: " + (err.message || String(err));
 			console.error(sessionStartError, err);
 			isXrLoopActive = false;
-			// If VR entry fails, ensure video-info is hidden if it was shown by DOMContentLoaded
-			// (only if VR was initially thought to be supported)
-			if (videoInfoDiv && enterVrBtn && enterVrBtn.dataset.xrSupported === "true") {
-				 videoInfoDiv.style.display = 'block'; // Keep it visible if VR was supported
-			} else if (videoInfoDiv) {
-				 videoInfoDiv.style.display = 'none'; // Hide if VR was not supported
-			}
 
 			if (vr180Mesh) vr180Mesh.visible = false;
 			if (sphereMaterial) { sphereMaterial.map = null; sphereMaterial.needsUpdate = true; }
@@ -923,14 +887,8 @@ function onVRSessionEnd(event) {
 		}
 	}
 
-	if (enterVrBtn) enterVrBtn.textContent = 'Enter VR';
+	// No need to change button text when exiting VR as it should keep its original text
 	
-	// When VR session ends, video-info should remain visible if VR is supported.
-	// Its visibility is primarily controlled by the initial check in DOMContentLoaded.
-	// So, no change to videoInfoDiv.style.display here.
-	// If it was 'block' because VR is supported, it stays 'block'.
-	// console.log("VR Session ended. Video-info display:", videoInfoDiv ? videoInfoDiv.style.display : "not found");
-
 
 	if (video && !video.paused) {
 		video.pause();
@@ -967,9 +925,7 @@ function onVRSessionEnd(event) {
 		console.warn("onVRSessionEnd: Global xrSession was different from the endedSession. Global xrSession:", xrSession, "Ended session:", endedSession);
 		xrSession = null;
 	}
-	if (enterVrBtn) {
-		enterVrBtn.textContent = enterVrBtn.dataset.enterVrText;
-	}
+	// No need to change button text when exiting VR as it should keep its original text
 
 	onWindowResize();
 }
