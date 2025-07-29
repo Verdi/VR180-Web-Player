@@ -6,12 +6,12 @@ Got an immersive video you want people to see with the Apple Vision Pro or Meta 
 ## How to use it
 Add the player script `<script type="module" src="vr180-player.js"></script>` before the closing body tag and use this HTML snippet: 
 ```
-<div id="player-container">
-	<video id="vrVideo" title="VR180 Video" crossOrigin="anonymous" playsinline>
+<div id="vr-container">
+	<video id="vr180" poster="poster.jpg" title="Demo Video" crossOrigin="anonymous" playsinline>
 		<source src="sbs-video.mp4" type="video/mp4">
 	</video>
 </div>
-	<button id="enterVrBtn">Enter VR</button>
+<button id="playBtn">Play</button>
 ```
 This creates a button on your page. When VR is available, the button will be active and clicking it will begin the immersive experience. 
 
