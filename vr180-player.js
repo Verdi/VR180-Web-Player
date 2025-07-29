@@ -5,7 +5,7 @@ let vr180Mesh;
 let xrSession = null;
 let controller1, raycaster, uiElements = [];
 const tempMatrix = new THREE.Matrix4();
-let videoElement, enterVrBtn;
+let videoElement, playBtn;
 let frameCounter = 0;
 
 let isXrLoopActive = false;
@@ -80,19 +80,19 @@ const SOUND_MUTED_SVG_PATH = "M6.9082 2.8985C7.71639 2.45747 8.74994 3.03437 8.7
 
 
 document.addEventListener('DOMContentLoaded', () => {
-	videoElement = document.getElementById('vrVideo');
-	enterVrBtn = document.getElementById('enterVrBtn');
+	videoElement = document.getElementById('vr180');
+	playBtn = document.getElementById('playBtn');
 
 	if (videoElement) {
 		videoElement.style.display = 'none';
 	}
 
-	if (!videoElement || !enterVrBtn) {
+	if (!videoElement || !playBtn) {
 		console.error("CRITICAL_ERROR_DOM: Essential HTML elements (video or VR button) not found.");
 		return;
 	}
 
-	enterVrBtn.disabled = true;
+	playBtn.disabled = true;
 	if (videoElement) {
 		videoElement.load();
 	}
@@ -100,20 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (navigator.xr) {
 		navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
 			if (supported) {
-				enterVrBtn.dataset.xrSupported = "true";
+				playBtn.dataset.xrSupported = "true";
 				init();
 			} else {
-				enterVrBtn.dataset.xrSupported = "false";
-				enterVrBtn.disabled = true;
+				playBtn.dataset.xrSupported = "false";
+				playBtn.disabled = true;
 			}
 		}).catch(err => {
 			console.error("XR Support Check Error:", err);
-			enterVrBtn.disabled = true;
+			playBtn.disabled = true;
 		});
 	} else {
 		// If navigator.xr itself is not available, VR is not supported
-		if (enterVrBtn) {
-			enterVrBtn.disabled = true;
+		if (playBtn) {
+			playBtn.disabled = true;
 		}
 	}
 });
@@ -214,7 +214,7 @@ function init() {
 		renderer.setSize(window.innerWidth, window.innerHeight);
 		renderer.xr.enabled = true;
 		renderer.outputColorSpace = THREE.SRGBColorSpace;
-		document.getElementById('player-container').appendChild(renderer.domElement);
+		document.getElementById('vr-container').appendChild(renderer.domElement);
 
 		if (renderer.domElement) {
 			renderer.domElement.style.display = 'none';
@@ -493,16 +493,16 @@ function init() {
 	}
 
 	try { // Phase 3: Event Listeners
-		if (enterVrBtn) {
-			enterVrBtn.addEventListener('click', handleEnterVRButtonClick);
+		if (playBtn) {
+			playBtn.addEventListener('click', handleEnterVRButtonClick);
 		}
 		window.addEventListener('resize', onWindowResize);
 
 		if (video) {
 			video.onloadedmetadata = () => {
-				if (isFinite(video.duration) && enterVrBtn) {
-					if (enterVrBtn.dataset.xrSupported === "true") {
-						enterVrBtn.disabled = false;
+				if (isFinite(video.duration) && playBtn) {
+					if (playBtn.dataset.xrSupported === "true") {
+						playBtn.disabled = false;
 					}
 				}
 				updateSeekBarAppearance();
@@ -510,8 +510,8 @@ function init() {
 				updateVRVolumeButtonIcon();
 			};
 			video.oncanplaythrough = () => {
-				if (enterVrBtn && enterVrBtn.dataset.xrSupported === "true" && video.readyState >= video.HAVE_FUTURE_DATA) {
-					enterVrBtn.disabled = false;
+				if (playBtn && playBtn.dataset.xrSupported === "true" && video.readyState >= video.HAVE_FUTURE_DATA) {
+					playBtn.disabled = false;
 				}
 			};
 			video.ontimeupdate = () => {
@@ -529,7 +529,7 @@ function init() {
 				const videoError = video.error;
 				const errorDetail = videoError ? `Code: ${videoError.code}, Message: ${videoError.message}` : 'Unknown error';
 				console.error("VIDEO_ERROR_EVENT:", e, "Details:", errorDetail);
-				if (enterVrBtn) enterVrBtn.disabled = true;
+				if (playBtn) playBtn.disabled = true;
 			};
 			video.addEventListener('ended', onVideoEnded);
 			video.addEventListener('volumechange', updateVRVolumeButtonIcon);
