@@ -4,14 +4,34 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 	<title>VR180 Web Player</title>
+	<style>
+        body {
+		  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+		  font-size: 1rem;
+		  font-weight: normal;
+		}
+		main {
+			max-width: 750px;
+			margin: auto;
+		}
+		video {
+			width: 100%;
+			height: auto;
+            aspect-ratio: 16/9;
+		}
+	</style>
 	</head>
 <body>
+	<main>
+		<h1>VR180 Web Player</h1>
+		<p>This is a web-based player for 180° stereoscopic video.</p>
 		<div id="player-container">
-			<video id="vrVideo" title="VR180 Video" controls crossOrigin="anonymous" playsinline webkit-playsinline>
-				<source src="REPLACE_THIS.mp4" type="video/mp4">
+			<video id="vrVideo" title="VR180 Video" crossOrigin="anonymous" playsinline>
+				<source src="sbs-video.mp4" type="video/mp4">
 			</video>
 		</div>
 		<button id="enterVrBtn">Enter VR</button>
+	</main>
 	<script type="module" src="vr180-player.js"></script>
 </body>
 </html>
