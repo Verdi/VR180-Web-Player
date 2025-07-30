@@ -1,0 +1,53 @@
+#vr-container {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+}
+
+#playBtn {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	width: 80px;
+	height: 80px;
+	transition: opacity 0.3s ease, transform 0.2s ease;
+	z-index: 10;
+}
+
+#playBtn:hover {
+	transform: translate(-50%, -50%) scale(1.1);
+}
+
+#playBtn:active {
+	transform: translate(-50%, -50%) scale(0.95);
+}
+
+#playBtn.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#playBtn img {
+	width: 100%;
+	height: 100%;
+}
+
+/* Responsive sizing */
+@media (max-width: 600px) {
+	#playBtn {
+		width: 60px;
+		height: 60px;
+	}
+}
+
+@media (min-width: 900px) {
+	#playBtn {
+		width: 100px;
+		height: 100px;
+	}
+}

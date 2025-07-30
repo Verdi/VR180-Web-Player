@@ -4,6 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 	<title>VR180 Web Player</title>
+	<link rel="stylesheet" href="vr180-player.css">
 	<style>
         body {
 		  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
@@ -19,60 +20,6 @@
 			height: auto;
             aspect-ratio: 16/9;
 		}
-		
-		#vr-container {
-			position: relative;
-			display: inline-block;
-			width: 100%;
-		}
-		
-		#playBtn {
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			background: none;
-			border: none;
-			cursor: pointer;
-			padding: 0;
-			width: 80px;
-			height: 80px;
-			transition: opacity 0.3s ease, transform 0.2s ease;
-			z-index: 10;
-		}
-		
-		#playBtn:hover {
-			transform: translate(-50%, -50%) scale(1.1);
-		}
-		
-		#playBtn:active {
-			transform: translate(-50%, -50%) scale(0.95);
-		}
-		
-		#playBtn.hidden {
-			opacity: 0;
-			pointer-events: none;
-		}
-		
-		#playBtn svg {
-			width: 100%;
-			height: 100%;
-		}
-		
-		/* Responsive sizing */
-		@media (max-width: 600px) {
-			#playBtn {
-				width: 60px;
-				height: 60px;
-			}
-		}
-		
-		@media (min-width: 900px) {
-			#playBtn {
-				width: 100px;
-				height: 100px;
-			}
-		}
 	</style>
 	</head>
 <body>
@@ -84,17 +31,7 @@
 				<source src="sbs-video.mp4" type="video/mp4">
 			</video>
 			<button id="playBtn" aria-label="Play video">
-				<svg width="178" height="178" viewBox="0 0 178 178" fill="none" xmlns="http://www.w3.org/2000/svg">
-					<rect x="0.277832" y="0.5" width="176.891" height="176.891" rx="88.4453" fill="black" fill-opacity="0.7" style="mix-blend-mode:color-dodge"/>
-					<g clip-path="url(#clip0_61_569)">
-						<path d="M129.531 81.5831C133.792 84.8001 133.792 91.2001 129.531 94.4171L72.5213 137.46C67.224 141.459 59.6361 137.68 59.6361 131.043V44.9577C59.6361 38.3201 67.224 34.5413 72.5213 38.5407L129.531 81.5831Z" fill="white"/>
-					</g>
-					<defs>
-						<clipPath id="clip0_61_569">
-							<rect width="128.648" height="128.648" fill="white" transform="translate(29.4844 23.676)"/>
-						</clipPath>
-					</defs>
-				</svg>
+				<img src="play.svg" alt="Play">
 			</button>
 		</div>
 	</main>
