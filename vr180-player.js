@@ -9,7 +9,25 @@ let videoElement, playBtn;
 let frameCounter = 0;
 
 let isXrLoopActive = false;
+let is2DMode = false;
 let vrControlPanel;
+
+// 2D Camera Controls
+let camera2D;
+let cameraRotation = { yaw: 0, pitch: 0 };
+let cameraVelocity = { yaw: 0, pitch: 0 };
+let isDragging = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+let lastTouchX = 0;
+let lastTouchY = 0;
+
+// 2D Control Constants
+const MOUSE_SENSITIVITY = 0.002;
+const TOUCH_SENSITIVITY = 0.003;
+const MOMENTUM_DAMPING = 0.8; // Reduced from 0.9 for 50% less inertia
+const MAX_PITCH = Math.PI * (45 / 180); // ~45 degrees - edge of VR180 content aligns with viewport edge
+const MAX_YAW = Math.PI * (45 / 180); // ~45 degrees - edge of VR180 content aligns with viewport edge
 
 // Figma design constants (for layout reference)
 const FIGMA_PANEL_WIDTH_PX = 450;
@@ -283,6 +301,17 @@ function init() {
 		vr180Mesh.onBeforeRender = function (renderer, scene, activeCamera, geometry, material, group) {
 			if (!material.map) return;
 			const isPresentingXR = renderer.xr.isPresenting;
+			
+			// Handle 2D mode - show only left eye view
+			if (is2DMode && !isPresentingXR) {
+				material.map.offset.x = 0;
+				material.map.repeat.x = 0.5;
+				material.map.offset.y = 0;
+				material.map.repeat.y = 1;
+				return;
+			}
+			
+			// Default to full texture for non-VR, non-2D mode
 			material.map.offset.x = 0; material.map.repeat.x = 1;
 			material.map.offset.y = 0; material.map.repeat.y = 1;
 			if (!isPresentingXR) {
@@ -309,6 +338,11 @@ function init() {
 				}
 			}
 		};
+
+		// Initialize 2D camera
+		camera2D = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+		camera2D.position.set(0, 0, 0);
+		camera2D.rotation.set(0, 0, 0);
 	} catch (e) {
 		console.error("INIT_ERROR (Phase 1 - Core Setup):", e);
 		renderer = null;
@@ -677,15 +711,138 @@ function hidePanel() {
 function onWindowResize() {
 	if (!renderer) return;
 	if (renderer.xr && renderer.xr.isPresenting) return;
-	if (camera && renderer.domElement.style.display !== 'none') {
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-		renderer.setSize(window.innerWidth, window.innerHeight);
-	} else if (camera) {
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-		renderer.setSize(window.innerWidth, window.innerHeight);
+	
+	if (is2DMode) {
+		// In 2D mode, resize to match video element dimensions
+		if (video) {
+			const videoRect = video.getBoundingClientRect();
+			const videoWidth = videoRect.width;
+			const videoHeight = videoRect.height;
+			
+			renderer.setSize(videoWidth, videoHeight);
+			camera2D.aspect = videoWidth / videoHeight;
+			camera2D.updateProjectionMatrix();
+		}
+	} else {
+		// Normal VR/window mode
+		if (camera && renderer.domElement.style.display !== 'none') {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		} else if (camera) {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+		
+		// Update 2D camera aspect ratio for potential future use
+		if (camera2D) {
+			camera2D.aspect = window.innerWidth / window.innerHeight;
+			camera2D.updateProjectionMatrix();
+		}
 	}
+}
+
+// 2D Camera Control Functions
+function updateCameraRotation() {
+	if (!camera2D) return;
+	
+	// Apply momentum
+	cameraRotation.yaw += cameraVelocity.yaw;
+	cameraRotation.pitch += cameraVelocity.pitch;
+	
+	// Constrain pitch (vertical rotation)
+	cameraRotation.pitch = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, cameraRotation.pitch));
+	
+	// Constrain yaw (horizontal rotation) to VR180 content boundaries
+	cameraRotation.yaw = Math.max(-MAX_YAW, Math.min(MAX_YAW, cameraRotation.yaw));
+	
+	// Apply damping to velocity
+	cameraVelocity.yaw *= MOMENTUM_DAMPING;
+	cameraVelocity.pitch *= MOMENTUM_DAMPING;
+	
+	// Stop very small velocities
+	if (Math.abs(cameraVelocity.yaw) < 0.001) cameraVelocity.yaw = 0;
+	if (Math.abs(cameraVelocity.pitch) < 0.001) cameraVelocity.pitch = 0;
+	
+	// Apply rotation to camera
+	camera2D.rotation.set(cameraRotation.pitch, cameraRotation.yaw, 0);
+}
+
+// Mouse Controls
+function onMouseDown(event) {
+	if (!is2DMode) return;
+	isDragging = true;
+	lastMouseX = event.clientX;
+	lastMouseY = event.clientY;
+	cameraVelocity.yaw = 0;
+	cameraVelocity.pitch = 0;
+}
+
+function onMouseMove(event) {
+	if (!is2DMode || !isDragging) return;
+	
+	const deltaX = event.clientX - lastMouseX;
+	const deltaY = event.clientY - lastMouseY;
+	
+	cameraVelocity.yaw = deltaX * MOUSE_SENSITIVITY;
+	cameraVelocity.pitch = deltaY * MOUSE_SENSITIVITY;
+	
+	lastMouseX = event.clientX;
+	lastMouseY = event.clientY;
+}
+
+function onMouseUp(event) {
+	if (!is2DMode) return;
+	isDragging = false;
+}
+
+// Touch Controls
+function onTouchStart(event) {
+	if (!is2DMode) return;
+	event.preventDefault();
+	if (event.touches.length === 1) {
+		isDragging = true;
+		lastTouchX = event.touches[0].clientX;
+		lastTouchY = event.touches[0].clientY;
+		cameraVelocity.yaw = 0;
+		cameraVelocity.pitch = 0;
+	}
+}
+
+function onTouchMove(event) {
+	if (!is2DMode || !isDragging) return;
+	event.preventDefault();
+	
+	if (event.touches.length === 1) {
+		const deltaX = event.touches[0].clientX - lastTouchX;
+		const deltaY = event.touches[0].clientY - lastTouchY;
+		
+		cameraVelocity.yaw = deltaX * TOUCH_SENSITIVITY;
+		cameraVelocity.pitch = deltaY * TOUCH_SENSITIVITY;
+		
+		lastTouchX = event.touches[0].clientX;
+		lastTouchY = event.touches[0].clientY;
+	}
+}
+
+function onTouchEnd(event) {
+	if (!is2DMode) return;
+	event.preventDefault();
+	isDragging = false;
+}
+
+// 2D Render Loop
+function render2D() {
+	if (!is2DMode) return;
+	
+	updateCameraRotation();
+	
+	if (renderer && camera2D && scene) {
+		renderer.render(scene, camera2D);
+	}
+	
+	requestAnimationFrame(render2D);
 }
 
 function hidePlayButton() {
@@ -791,10 +948,91 @@ async function handleEnterVRButtonClick() {
 		// VR is supported - use VR functionality
 		await actualSessionToggle();
 	} else {
-		// VR is not supported - use regular video playback and enable native controls
-		enableNativeControls();
-		togglePlayPause();
+		// VR is not supported - start 2D rectilinear mode
+		start2DMode();
 	}
+}
+
+function start2DMode() {
+	if (!video || !renderer || !camera2D) {
+		console.error("Required components not available for 2D mode");
+		return;
+	}
+	
+	// Set 2D mode flag
+	is2DMode = true;
+	
+	// Get the video element's computed dimensions
+	const videoRect = video.getBoundingClientRect();
+	const videoWidth = videoRect.width;
+	const videoHeight = videoRect.height;
+	
+	// Resize renderer to match video dimensions
+	renderer.setSize(videoWidth, videoHeight);
+	
+	// Update 2D camera aspect ratio to match video
+	camera2D.aspect = videoWidth / videoHeight;
+	camera2D.updateProjectionMatrix();
+	
+	// Position the canvas to match the video element
+	const canvas = renderer.domElement;
+	canvas.style.position = 'absolute';
+	canvas.style.top = '0';
+	canvas.style.left = '0';
+	canvas.style.width = '100%';
+	canvas.style.height = 'auto';
+	canvas.style.aspectRatio = '16/9';
+	
+	// Hide HTML video element and show WebGL canvas
+	video.style.display = 'none';
+	canvas.style.display = '';
+	
+	// Create video texture if not exists
+	if (videoTexture) videoTexture.dispose();
+	videoTexture = new THREE.VideoTexture(video);
+	videoTexture.minFilter = THREE.LinearFilter;
+	videoTexture.magFilter = THREE.LinearFilter;
+	videoTexture.colorSpace = THREE.SRGBColorSpace;
+	
+	// Apply texture to sphere material and make mesh visible
+	if (sphereMaterial && vr180Mesh) {
+		sphereMaterial.map = videoTexture;
+		sphereMaterial.needsUpdate = true;
+		vr180Mesh.visible = true;
+	}
+	
+	// Start video playback
+	togglePlayPause();
+	
+	// Add event listeners for 2D controls
+	add2DEventListeners();
+	
+	// Start 2D render loop
+	render2D();
+}
+
+function add2DEventListeners() {
+	// Mouse events
+	renderer.domElement.addEventListener('mousedown', onMouseDown);
+	renderer.domElement.addEventListener('mousemove', onMouseMove);
+	renderer.domElement.addEventListener('mouseup', onMouseUp);
+	
+	// Touch events
+	renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+	renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+	renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: false });
+}
+
+function remove2DEventListeners() {
+	// Mouse events
+	renderer.domElement.removeEventListener('mousedown', onMouseDown);
+	renderer.domElement.removeEventListener('mousemove', onMouseMove);
+	renderer.domElement.removeEventListener('mouseup', onMouseUp);
+	
+	// Touch events
+	renderer.domElement.removeEventListener('touchstart', onTouchStart);
+	renderer.domElement.removeEventListener('touchmove', onTouchMove);
+	renderer.domElement.removeEventListener('touchend', onTouchEnd);
 }
 
 async function actualSessionToggle() {
