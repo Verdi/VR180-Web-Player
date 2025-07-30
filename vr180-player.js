@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	playBtn.disabled = true;
+	
 	if (videoElement) {
 		videoElement.load();
 	}
@@ -97,22 +98,29 @@ document.addEventListener('DOMContentLoaded', () => {
 		navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
 			if (supported) {
 				playBtn.dataset.xrSupported = "true";
-				init();
 			} else {
 				playBtn.dataset.xrSupported = "false";
 				// Enable button for regular video playback when VR is not supported
 				playBtn.disabled = false;
 			}
+			// Always call init() regardless of VR support
+			init();
 		}).catch(err => {
 			console.error("XR Support Check Error:", err);
+			playBtn.dataset.xrSupported = "false";
 			// Enable button for regular video playback when VR check fails
 			playBtn.disabled = false;
+			// Call init() even when VR check fails
+			init();
 		});
 	} else {
+		playBtn.dataset.xrSupported = "false";
 		// If navigator.xr itself is not available, enable button for regular video playback
 		if (playBtn) {
 			playBtn.disabled = false;
 		}
+		// Call init() even when XR is not available
+		init();
 	}
 });
 
@@ -497,18 +505,18 @@ function init() {
 		window.addEventListener('resize', onWindowResize);
 
 		if (video) {
-			video.onloadedmetadata = () => {
-				if (isFinite(video.duration) && playBtn) {
-					if (playBtn.dataset.xrSupported === "true") {
-						playBtn.disabled = false;
-					}
-				}
-				updateSeekBarAppearance();
-				updateVRPlayPauseButtonIcon();
-				updateVRVolumeButtonIcon();
-			};
+		video.onloadedmetadata = () => {
+			if (isFinite(video.duration) && playBtn) {
+				// Enable button for both VR and non-VR scenarios when video is ready
+				playBtn.disabled = false;
+			}
+			updateSeekBarAppearance();
+			updateVRPlayPauseButtonIcon();
+			updateVRVolumeButtonIcon();
+		};
 			video.oncanplaythrough = () => {
-				if (playBtn && playBtn.dataset.xrSupported === "true" && video.readyState >= video.HAVE_FUTURE_DATA) {
+				if (playBtn && video.readyState >= video.HAVE_FUTURE_DATA) {
+					// Enable button for both VR and non-VR scenarios when video is ready to play
 					playBtn.disabled = false;
 				}
 			};
