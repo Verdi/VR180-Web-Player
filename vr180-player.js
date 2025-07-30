@@ -688,6 +688,18 @@ function onWindowResize() {
 	}
 }
 
+function hidePlayButton() {
+	if (playBtn) {
+		playBtn.classList.add('hidden');
+	}
+}
+
+function enableNativeControls() {
+	if (video) {
+		video.controls = true;
+	}
+}
+
 function togglePlayPause() {
 	if (!video || !video.currentSrc) return;
 	if (video.paused || video.ended) {
@@ -771,12 +783,16 @@ async function handleEnterVRButtonClick() {
 		return;
 	}
 	
+	// Hide the play button after click
+	hidePlayButton();
+	
 	// Check if VR is supported
 	if (playBtn.dataset.xrSupported === "true") {
 		// VR is supported - use VR functionality
 		await actualSessionToggle();
 	} else {
-		// VR is not supported - use regular video playback
+		// VR is not supported - use regular video playback and enable native controls
+		enableNativeControls();
 		togglePlayPause();
 	}
 }
