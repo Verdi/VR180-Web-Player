@@ -83,10 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	videoElement = document.getElementById('vr180');
 	playBtn = document.getElementById('playBtn');
 
-	if (videoElement) {
-		videoElement.style.display = 'none';
-	}
-
 	if (!videoElement || !playBtn) {
 		console.error("CRITICAL_ERROR_DOM: Essential HTML elements (video or VR button) not found.");
 		return;
@@ -104,16 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
 				init();
 			} else {
 				playBtn.dataset.xrSupported = "false";
-				playBtn.disabled = true;
+				// Enable button for regular video playback when VR is not supported
+				playBtn.disabled = false;
 			}
 		}).catch(err => {
 			console.error("XR Support Check Error:", err);
-			playBtn.disabled = true;
+			// Enable button for regular video playback when VR check fails
+			playBtn.disabled = false;
 		});
 	} else {
-		// If navigator.xr itself is not available, VR is not supported
+		// If navigator.xr itself is not available, enable button for regular video playback
 		if (playBtn) {
-			playBtn.disabled = true;
+			playBtn.disabled = false;
 		}
 	}
 });
@@ -764,8 +762,15 @@ async function handleEnterVRButtonClick() {
 		console.error("Video element not found for VR button click.");
 		return;
 	}
-	// If xrSession exists, we want to exit. If null, we want to enter.
-	await actualSessionToggle();
+	
+	// Check if VR is supported
+	if (playBtn.dataset.xrSupported === "true") {
+		// VR is supported - use VR functionality
+		await actualSessionToggle();
+	} else {
+		// VR is not supported - use regular video playback
+		togglePlayPause();
+	}
 }
 
 async function actualSessionToggle() {
@@ -804,6 +809,11 @@ async function actualSessionToggle() {
 			xrSession = session; 
 			xrSession.addEventListener('end', onVRSessionEnd); 
 
+
+			// Hide the regular video element when entering VR
+			if (video) {
+				video.style.display = 'none';
+			}
 
 			if (video && (video.paused || video.ended)) {
 				try {
@@ -887,8 +897,10 @@ function onVRSessionEnd(event) {
 		}
 	}
 
-	// No need to change button text when exiting VR as it should keep its original text
-	
+	// Show the regular video element when exiting VR
+	if (video) {
+		video.style.display = '';
+	}
 
 	if (video && !video.paused) {
 		video.pause();
