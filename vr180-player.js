@@ -879,6 +879,9 @@ function resetToOriginalState() {
 		video.pause();
 		video.currentTime = 0;
 		video.controls = false; // Disable native controls
+		
+		// Force video back to poster state by reloading
+		video.load();
 	}
 	
 	// Show the play button in center position
