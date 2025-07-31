@@ -31,8 +31,29 @@
 				<source src="sbs-video.mp4" type="video/mp4">
 			</video>
 			<button id="playBtn" aria-label="Play video">
-				<img src="play.png" alt="Play">
+				<img src="play.svg" alt="Play">
 			</button>
+			<div id="panel">
+				<div id="status">
+					<p id="video-title">Title</p>
+					<div id="progress">
+						<p id="current-time">00:00:00</p>
+						<div id="bar">
+							<div id="played"></div>
+						</div>
+						<p id="total-time">00:00:00</p>
+					</div>
+				</div>
+				<div id="controls">
+					<button id="fullscreen"></button>
+					<div id="nav">
+						<button id="back"></button>
+						<button id="play2"></button>
+						<button id="forward"></button>
+					</div>
+					<button id="mute"></button>
+				</div>
+			</div>
 		</div>
 	</main>
 	<script type="module" src="vr180-player.js"></script>

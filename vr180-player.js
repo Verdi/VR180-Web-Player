@@ -8,6 +8,13 @@ const tempMatrix = new THREE.Matrix4();
 let videoElement, playBtn;
 let frameCounter = 0;
 
+// 2D Control Panel Elements
+let controlPanel, videoTitle, currentTimeDisplay, totalTimeDisplay, progressBar, playedBar;
+let fullscreenBtn, backBtn, play2Btn, forwardBtn, muteBtn;
+let controlPanelTimeout;
+let isControlPanelVisible = false;
+const CONTROL_PANEL_HIDE_DELAY = 5000; // 5 seconds
+
 let isXrLoopActive = false;
 let is2DMode = false;
 let vrControlPanel;
@@ -547,6 +554,7 @@ function init() {
 			updateSeekBarAppearance();
 			updateVRPlayPauseButtonIcon();
 			updateVRVolumeButtonIcon();
+			update2DControlPanel();
 		};
 			video.oncanplaythrough = () => {
 				if (playBtn && video.readyState >= video.HAVE_FUTURE_DATA) {
@@ -557,13 +565,16 @@ function init() {
 			video.ontimeupdate = () => {
 				if (isFinite(video.duration)) {
 					updateSeekBarAppearance();
+					update2DControlPanel();
 				}
 			};
 			video.onplaying = () => {
 				updateVRPlayPauseButtonIcon();
+				update2DPlayPauseButton();
 			};
 			video.onpause = () => {
 				updateVRPlayPauseButtonIcon();
+				update2DPlayPauseButton();
 			};
 			video.onerror = (e) => {
 				const videoError = video.error;
@@ -573,7 +584,11 @@ function init() {
 			};
 			video.addEventListener('ended', onVideoEnded);
 			video.addEventListener('volumechange', updateVRVolumeButtonIcon);
+			video.addEventListener('volumechange', update2DMuteButton);
 		}
+		
+		// Initialize 2D control panel
+		init2DControlPanel();
 	} catch (e) {
 		console.error("INIT_ERROR (Phase 3 - Event Listeners):", e);
 	}
@@ -845,6 +860,191 @@ function render2D() {
 	requestAnimationFrame(render2D);
 }
 
+// 2D Control Panel Functions
+function init2DControlPanel() {
+	// Get references to 2D control elements
+	controlPanel = document.getElementById('panel');
+	videoTitle = document.getElementById('video-title');
+	currentTimeDisplay = document.getElementById('current-time');
+	totalTimeDisplay = document.getElementById('total-time');
+	progressBar = document.getElementById('bar');
+	playedBar = document.getElementById('played');
+	fullscreenBtn = document.getElementById('fullscreen');
+	backBtn = document.getElementById('back');
+	play2Btn = document.getElementById('play2');
+	forwardBtn = document.getElementById('forward');
+	muteBtn = document.getElementById('mute');
+
+	if (!controlPanel) {
+		console.error("2D Control panel not found");
+		return;
+	}
+
+	// Set initial video title
+	if (videoTitle && video) {
+		const title = video.getAttribute('title') || 
+					  video.querySelector('source')?.src.split('/').pop()?.split('.')[0].replace(/-/g, ' ') || 
+					  "Demo Video";
+		videoTitle.textContent = title;
+	}
+
+	// Add event listeners for 2D controls
+	if (fullscreenBtn) {
+		fullscreenBtn.addEventListener('click', toggle2DFullscreen);
+	}
+	
+	if (backBtn) {
+		backBtn.addEventListener('click', () => {
+			if (video) {
+				video.currentTime = Math.max(0, video.currentTime - 15);
+			}
+			show2DControlPanel();
+		});
+	}
+	
+	if (play2Btn) {
+		play2Btn.addEventListener('click', () => {
+			togglePlayPause();
+			show2DControlPanel();
+		});
+	}
+	
+	if (forwardBtn) {
+		forwardBtn.addEventListener('click', () => {
+			if (video && isFinite(video.duration)) {
+				video.currentTime = Math.min(video.duration, video.currentTime + 15);
+			}
+			show2DControlPanel();
+		});
+	}
+	
+	if (muteBtn) {
+		muteBtn.addEventListener('click', () => {
+			if (video) {
+				video.muted = !video.muted;
+			}
+			show2DControlPanel();
+		});
+	}
+	
+	if (progressBar) {
+		progressBar.addEventListener('click', (e) => {
+			if (video && isFinite(video.duration)) {
+				const rect = progressBar.getBoundingClientRect();
+				const clickX = e.clientX - rect.left;
+				const progress = clickX / rect.width;
+				video.currentTime = progress * video.duration;
+			}
+			show2DControlPanel();
+		});
+	}
+
+	// Add mouse movement listener for 2D mode
+	document.addEventListener('mousemove', on2DMouseMove);
+	document.addEventListener('touchstart', on2DTouchStart);
+}
+
+function show2DControlPanel() {
+	if (!is2DMode || !controlPanel) return;
+	
+	clearTimeout(controlPanelTimeout);
+	controlPanel.classList.add('visible');
+	isControlPanelVisible = true;
+	
+	controlPanelTimeout = setTimeout(hide2DControlPanel, CONTROL_PANEL_HIDE_DELAY);
+}
+
+function hide2DControlPanel() {
+	if (!controlPanel) return;
+	
+	clearTimeout(controlPanelTimeout);
+	controlPanel.classList.remove('visible');
+	isControlPanelVisible = false;
+}
+
+function on2DMouseMove() {
+	if (is2DMode) {
+		show2DControlPanel();
+	}
+}
+
+function on2DTouchStart() {
+	if (is2DMode) {
+		show2DControlPanel();
+	}
+}
+
+function update2DControlPanel() {
+	if (!is2DMode || !video) return;
+	
+	// Update time displays
+	if (currentTimeDisplay) {
+		currentTimeDisplay.textContent = formatTime(video.currentTime);
+	}
+	
+	if (totalTimeDisplay && isFinite(video.duration)) {
+		totalTimeDisplay.textContent = formatTime(video.duration);
+	}
+	
+	// Update progress bar
+	if (playedBar && isFinite(video.duration) && video.duration > 0) {
+		const progress = (video.currentTime / video.duration) * 100;
+		playedBar.style.width = `${progress}%`;
+	}
+}
+
+function update2DPlayPauseButton() {
+	if (!is2DMode || !play2Btn || !video) return;
+	
+	if (video.paused || video.ended) {
+		play2Btn.classList.remove('playing');
+		play2Btn.classList.add('paused');
+	} else {
+		play2Btn.classList.remove('paused');
+		play2Btn.classList.add('playing');
+	}
+}
+
+function update2DMuteButton() {
+	if (!is2DMode || !muteBtn || !video) return;
+	
+	// The CSS will handle the visual state based on the muted property
+	// We could add classes here if needed for different mute states
+}
+
+function toggle2DFullscreen() {
+	if (!document.fullscreenElement) {
+		// Enter fullscreen
+		const container = document.getElementById('vr-container');
+		if (container && container.requestFullscreen) {
+			container.requestFullscreen().catch(err => {
+				console.error('Error attempting to enable fullscreen:', err);
+			});
+		}
+	} else {
+		// Exit fullscreen
+		if (document.exitFullscreen) {
+			document.exitFullscreen().catch(err => {
+				console.error('Error attempting to exit fullscreen:', err);
+			});
+		}
+	}
+}
+
+function formatTime(seconds) {
+	if (!isFinite(seconds)) return '00:00:00';
+	
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+	const secs = Math.floor(seconds % 60);
+	
+	if (hours > 0) {
+		return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+	} else {
+		return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+	}
+}
+
 function hidePlayButton() {
 	if (playBtn) {
 		playBtn.classList.add('hidden');
@@ -894,6 +1094,9 @@ function resetToOriginalState() {
 	if (is2DMode) {
 		is2DMode = false;
 		remove2DEventListeners();
+		
+		// Hide 2D control panel
+		hide2DControlPanel();
 		
 		// Reset camera rotation
 		cameraRotation = { yaw: 0, pitch: 0 };
@@ -1049,6 +1252,9 @@ function start2DMode() {
 	
 	// Add event listeners for 2D controls
 	add2DEventListeners();
+	
+	// Show 2D control panel
+	show2DControlPanel();
 	
 	// Start 2D render loop
 	render2D();

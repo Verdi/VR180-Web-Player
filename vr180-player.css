@@ -51,3 +51,214 @@
 		height: 100px;
 	}
 }
+
+/* 2D Video Controls Panel */
+#panel {
+	position: absolute;
+	bottom: 10%;
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: 1000px;
+	padding: 20px;
+	border-radius: 30px;
+	background: rgba(0, 0, 0, 0.70);
+	color: #fff;
+	font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+	z-index: 100;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.3s ease, visibility 0.3s ease;
+	pointer-events: none;
+}
+
+#panel.visible {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+}
+
+#panel img {
+	width: 100%;
+	height: auto;
+}
+
+#status {
+	margin: 0 12px 12px 12px;
+}
+
+#video-title {
+	text-align: center;
+	margin: 0 0 16px 0;
+	font-size: 1rem;
+	font-weight: 500;
+}
+
+#current-time,
+#total-time {
+	margin: 0;
+	font-size: 0.875rem;
+	font-variant-numeric: tabular-nums;
+}
+
+#progress {
+	display: grid;
+	grid-template-columns: min-content 1fr min-content;
+	grid-gap: 8px;
+	align-items: center;
+}
+
+#bar {
+	width: 100%;
+	height: 4px;
+	border-radius: 2px;
+	background: #666;
+	cursor: pointer;
+	position: relative;
+}
+
+#played {
+	border-radius: 2px;
+	background: #fff;
+	height: 4px;
+	width: 0%;
+	transition: width 0.1s ease;
+}
+
+#controls {
+	display: grid;
+	grid-template-areas: "full lflex nav rflex mute";
+	grid-template-columns: 44px 1fr 156px 1fr 44px;
+	height: 44px;
+}
+
+#panel button {
+	all: unset;
+	cursor: pointer;
+	border-radius: 4px;
+	transition: opacity 0.15s ease-in-out;
+}
+
+#panel button:hover {
+	opacity: 0.8;
+}
+
+#fullscreen {
+	grid-area: full;
+	width: 44px;
+	height: 44px;
+	background-image: url(fullscreen.png);
+	background-size: 44px 44px;
+	background-repeat: no-repeat;
+	background-position: center;
+	transition: background-image 0.15s ease-in-out;
+}
+
+#fullscreen:hover {
+	background-image: url(fullscreen-hover.png);
+}
+
+#mute {
+	grid-area: mute;
+	width: 44px;
+	height: 44px;
+	background-image: url(mute.png);
+	background-size: 44px 44px;
+	background-repeat: no-repeat;
+	background-position: center;
+	transition: background-image 0.15s ease-in-out;
+}
+
+#mute:hover {
+	background-image: url(mute-hover.png);
+}
+
+#nav {
+	grid-area: nav;
+	display: grid;
+	grid-template-columns: 44px 44px 44px;
+	grid-gap: 12px;
+	height: 44px;
+}
+
+#back {
+	width: 44px;
+	height: 44px;
+	background-image: url(back.png);
+	background-size: 44px 44px;
+	background-repeat: no-repeat;
+	background-position: center;
+	transition: background-image 0.15s ease-in-out;
+}
+
+#back:hover {
+	background-image: url(back-hover.png);
+}
+
+#play2 {
+	width: 44px;
+	height: 44px;
+	background-image: url(play2.png);
+	background-size: 44px 44px;
+	background-repeat: no-repeat;
+	background-position: center;
+	transition: background-image 0.15s ease-in-out;
+}
+
+#play2:hover {
+	background-image: url(play2-hover.png);
+}
+
+#play2.paused {
+	background-image: url(play2.png);
+}
+
+#play2.paused:hover {
+	background-image: url(play2-hover.png);
+}
+
+#play2.playing {
+	background-image: url(pause2.png);
+}
+
+#play2.playing:hover {
+	background-image: url(pause2-hover.png);
+}
+
+#forward {
+	width: 44px;
+	height: 44px;
+	background-image: url(forward.png);
+	background-size: 44px 44px;
+	background-repeat: no-repeat;
+	background-position: center;
+	transition: background-image 0.15s ease-in-out;
+}
+
+#forward:hover {
+	background-image: url(forward-hover.png);
+}
+
+/* Responsive adjustments for 2D controls */
+@media (max-width: 600px) {
+	#panel {
+		max-width: 90%;
+		padding: 16px;
+	}
+	
+	#controls {
+		grid-template-columns: 36px 1fr 132px 1fr 36px;
+		height: 36px;
+	}
+	
+	#fullscreen, #mute, #back, #play2, #forward {
+		width: 36px;
+		height: 36px;
+		background-size: 36px 36px;
+	}
+	
+	#nav {
+		grid-template-columns: 36px 36px 36px;
+		grid-gap: 8px;
+		height: 36px;
+	}
+}
