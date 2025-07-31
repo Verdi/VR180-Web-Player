@@ -873,6 +873,43 @@ function togglePlayPause() {
 	}
 }
 
+function resetToOriginalState() {
+	// Reset video to show poster frame
+	if (video) {
+		video.pause();
+		video.currentTime = 0;
+		video.controls = false; // Disable native controls
+	}
+	
+	// Show the play button in center position
+	if (playBtn) {
+		playBtn.classList.remove('hidden');
+		playBtn.disabled = false;
+	}
+	
+	// Reset 2D mode if it was active
+	if (is2DMode) {
+		is2DMode = false;
+		remove2DEventListeners();
+		
+		// Reset camera rotation
+		cameraRotation = { yaw: 0, pitch: 0 };
+		cameraVelocity = { yaw: 0, pitch: 0 };
+		isDragging = false;
+		
+		// Hide WebGL canvas and show video element
+		if (renderer && renderer.domElement) {
+			renderer.domElement.style.display = 'none';
+		}
+		if (video) {
+			video.style.display = '';
+		}
+		
+		// Reset renderer size
+		onWindowResize();
+	}
+}
+
 function onVideoEnded() {
 	if (video && !video.paused) video.pause();
 	if (xrSession && renderer && renderer.xr.isPresenting) {
@@ -888,6 +925,9 @@ function onVideoEnded() {
 				 onVRSessionEnd({session: null}); // Call with null session if already gone
 			}
 		});
+	} else {
+		// If not in VR, still reset to original state when video ends
+		resetToOriginalState();
 	}
 }
 
@@ -1199,7 +1239,9 @@ function onVRSessionEnd(event) {
 		console.warn("onVRSessionEnd: Global xrSession was different from the endedSession. Global xrSession:", xrSession, "Ended session:", endedSession);
 		xrSession = null;
 	}
-	// No need to change button text when exiting VR as it should keep its original text
+
+	// Reset to original state when exiting VR
+	resetToOriginalState();
 
 	onWindowResize();
 }
