@@ -6,7 +6,7 @@ Got an immersive video you want people to see with the Apple Vision Pro or Meta 
 ## How to use it
 1. Drop the `vr180player` directory in the root level of your website.
 2. Link to the player CSS file `<link rel="stylesheet" href="vr180player/vr180-player.css">`.
-3. Add the player script `<script type="module" src="vr180-player.js"></script>` before the closing body tag.
+3. Add the player script `<script type="module" src="vr180player/vr180-player.js"></script>` before the closing body tag.
 4. And use this HTML snippet to embed your video: 
 ```
 <div id="vr-container">
