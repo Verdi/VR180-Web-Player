@@ -1436,9 +1436,7 @@ function start2DMode() {
 	
 	// Position the canvas to match the video element
 	const canvas = renderer.domElement;
-	canvas.style.position = 'absolute';
-	canvas.style.top = '0';
-	canvas.style.left = '0';
+	canvas.style.position = 'relative';
 	canvas.style.width = '100%';
 	canvas.style.height = 'auto';
 	canvas.style.aspectRatio = '16/9';
