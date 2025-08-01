@@ -13,7 +13,7 @@ let controlPanel, videoTitle, currentTimeDisplay, totalTimeDisplay, progressBar,
 let fullscreenBtn, backBtn, play2Btn, forwardBtn, muteBtn;
 let controlPanelTimeout;
 let isControlPanelVisible = false;
-const CONTROL_PANEL_HIDE_DELAY = 5000; // 5 seconds
+const CONTROL_PANEL_HIDE_DELAY = 3000; // 3 seconds
 
 let isXrLoopActive = false;
 let is2DMode = false;
@@ -555,6 +555,7 @@ function init() {
 			updateVRPlayPauseButtonIcon();
 			updateVRVolumeButtonIcon();
 			update2DControlPanel();
+			update2DMuteButton();
 		};
 			video.oncanplaythrough = () => {
 				if (playBtn && video.readyState >= video.HAVE_FUTURE_DATA) {
@@ -795,6 +796,9 @@ function onMouseDown(event) {
 	lastMouseY = event.clientY;
 	cameraVelocity.yaw = 0;
 	cameraVelocity.pitch = 0;
+	
+	// Hide controls when dragging starts
+	hide2DControlPanel();
 }
 
 function onMouseMove(event) {
@@ -813,6 +817,9 @@ function onMouseMove(event) {
 function onMouseUp(event) {
 	if (!is2DMode) return;
 	isDragging = false;
+	
+	// Show controls when dragging ends
+	show2DControlPanel();
 }
 
 // Touch Controls
@@ -825,6 +832,9 @@ function onTouchStart(event) {
 		lastTouchY = event.touches[0].clientY;
 		cameraVelocity.yaw = 0;
 		cameraVelocity.pitch = 0;
+		
+		// Hide controls when dragging starts
+		hide2DControlPanel();
 	}
 }
 
@@ -848,6 +858,9 @@ function onTouchEnd(event) {
 	if (!is2DMode) return;
 	event.preventDefault();
 	isDragging = false;
+	
+	// Show controls when dragging ends
+	show2DControlPanel();
 }
 
 // 2D Render Loop
@@ -942,8 +955,7 @@ function init2DControlPanel() {
 		});
 	}
 
-	// Add mouse movement listener for 2D mode
-	document.addEventListener('mousemove', on2DMouseMove);
+	// Mouse movement listener will be added to canvas in start2DMode
 	document.addEventListener('touchstart', on2DTouchStart);
 }
 
@@ -963,6 +975,12 @@ function hide2DControlPanel() {
 	clearTimeout(controlPanelTimeout);
 	controlPanel.classList.remove('visible');
 	isControlPanelVisible = false;
+}
+
+function onCanvasMouseMove() {
+	if (is2DMode && !isDragging) {
+		show2DControlPanel();
+	}
 }
 
 function on2DMouseMove() {
@@ -1011,8 +1029,15 @@ function update2DPlayPauseButton() {
 function update2DMuteButton() {
 	if (!is2DMode || !muteBtn || !video) return;
 	
-	// The CSS will handle the visual state based on the muted property
-	// We could add classes here if needed for different mute states
+	if (video.muted) {
+		// Video is muted, show unmute icon (user can click to unmute)
+		muteBtn.classList.remove('muted');
+		muteBtn.classList.add('unmuted');
+	} else {
+		// Video is unmuted, show mute icon (user can click to mute)
+		muteBtn.classList.remove('unmuted');
+		muteBtn.classList.add('muted');
+	}
 }
 
 function toggle2DFullscreen() {
@@ -1032,6 +1057,24 @@ function toggle2DFullscreen() {
 			});
 		}
 	}
+}
+
+function handle2DVideoEnd() {
+	if (!is2DMode || !video) return;
+	
+	// Keep video at last frame (don't reset currentTime)
+	// Video is already paused by onVideoEnded()
+	
+	// Show control panel and keep it visible (no auto-hide timeout)
+	if (controlPanel) {
+		clearTimeout(controlPanelTimeout);
+		controlPanel.classList.add('visible');
+		isControlPanelVisible = true;
+		// Don't set timeout - panel stays visible until user interacts
+	}
+	
+	// Update play button to show replay state
+	update2DPlayPauseButton();
 }
 
 function position2DControlPanel() {
@@ -1089,10 +1132,20 @@ function enableNativeControls() {
 function togglePlayPause() {
 	if (!video || !video.currentSrc) return;
 	if (video.paused || video.ended) {
+		// If video has ended in 2D mode, restart from beginning
+		if (video.ended && is2DMode) {
+			video.currentTime = 0;
+		}
+		
 		if (video.readyState >= video.HAVE_ENOUGH_DATA || video.currentSrc) {
 			const playPromise = video.play();
 			if (playPromise !== undefined) {
-				playPromise.catch(err => console.error("Error during video.play():", err));
+				playPromise.then(() => {
+					// Resume normal control panel auto-hide behavior after restart
+					if (is2DMode && video.ended === false) {
+						show2DControlPanel();
+					}
+				}).catch(err => console.error("Error during video.play():", err));
 			} else {
 				console.error("video.play() did not return a promise.");
 			}
@@ -1147,7 +1200,9 @@ function resetToOriginalState() {
 
 function onVideoEnded() {
 	if (video && !video.paused) video.pause();
+	
 	if (xrSession && renderer && renderer.xr.isPresenting) {
+		// VR mode - exit VR and reset to original state
 		actualSessionToggle().catch(err => {
 			console.error("Error during automatic VR exit on video end:", err);
 			// Fallback cleanup if actualSessionToggle fails or doesn't fully clean up
@@ -1160,8 +1215,11 @@ function onVideoEnded() {
 				 onVRSessionEnd({session: null}); // Call with null session if already gone
 			}
 		});
+	} else if (is2DMode) {
+		// 2D mode - stay on last frame with controls visible
+		handle2DVideoEnd();
 	} else {
-		// If not in VR, still reset to original state when video ends
+		// Regular mode - reset to original state
 		resetToOriginalState();
 	}
 }
@@ -1297,6 +1355,9 @@ function add2DEventListeners() {
 	renderer.domElement.addEventListener('mousedown', onMouseDown);
 	renderer.domElement.addEventListener('mousemove', onMouseMove);
 	renderer.domElement.addEventListener('mouseup', onMouseUp);
+	
+	// Canvas-specific mouse movement for showing controls
+	renderer.domElement.addEventListener('mousemove', onCanvasMouseMove);
 	
 	// Touch events
 	renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });

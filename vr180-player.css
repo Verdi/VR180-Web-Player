@@ -162,6 +162,22 @@
 	background-image: url(mute-hover.png);
 }
 
+#mute.muted {
+	background-image: url(mute.png);
+}
+
+#mute.muted:hover {
+	background-image: url(mute-hover.png);
+}
+
+#mute.unmuted {
+	background-image: url(unmute.png);
+}
+
+#mute.unmuted:hover {
+	background-image: url(unmute-hover.png);
+}
+
 #nav {
 	grid-area: nav;
 	display: grid;
