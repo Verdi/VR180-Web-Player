@@ -136,7 +136,7 @@
 	grid-area: full;
 	width: 44px;
 	height: 44px;
-	background-image: url(fullscreen.png);
+	background-image: url(images/fullscreen.png);
 	background-size: 44px 44px;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -144,14 +144,14 @@
 }
 
 #fullscreen:hover {
-	background-image: url(fullscreen-hover.png);
+	background-image: url(images/fullscreen-hover.png);
 }
 
 #mute {
 	grid-area: mute;
 	width: 44px;
 	height: 44px;
-	background-image: url(mute.png);
+	background-image: url(images/mute.png);
 	background-size: 44px 44px;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -159,23 +159,23 @@
 }
 
 #mute:hover {
-	background-image: url(mute-hover.png);
+	background-image: url(images/mute-hover.png);
 }
 
 #mute.muted {
-	background-image: url(mute.png);
+	background-image: url(images/mute.png);
 }
 
 #mute.muted:hover {
-	background-image: url(mute-hover.png);
+	background-image: url(images/mute-hover.png);
 }
 
 #mute.unmuted {
-	background-image: url(unmute.png);
+	background-image: url(images/unmute.png);
 }
 
 #mute.unmuted:hover {
-	background-image: url(unmute-hover.png);
+	background-image: url(images/unmute-hover.png);
 }
 
 #nav {
@@ -189,7 +189,7 @@
 #back {
 	width: 44px;
 	height: 44px;
-	background-image: url(back.png);
+	background-image: url(images/back.png);
 	background-size: 44px 44px;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -197,13 +197,13 @@
 }
 
 #back:hover {
-	background-image: url(back-hover.png);
+	background-image: url(images/back-hover.png);
 }
 
 #play2 {
 	width: 44px;
 	height: 44px;
-	background-image: url(play2.png);
+	background-image: url(images/play2.png);
 	background-size: 44px 44px;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -211,29 +211,29 @@
 }
 
 #play2:hover {
-	background-image: url(play2-hover.png);
+	background-image: url(images/play2-hover.png);
 }
 
 #play2.paused {
-	background-image: url(play2.png);
+	background-image: url(images/play2.png);
 }
 
 #play2.paused:hover {
-	background-image: url(play2-hover.png);
+	background-image: url(images/play2-hover.png);
 }
 
 #play2.playing {
-	background-image: url(pause.png);
+	background-image: url(images/pause.png);
 }
 
 #play2.playing:hover {
-	background-image: url(pause-hover.png);
+	background-image: url(images/pause-hover.png);
 }
 
 #forward {
 	width: 44px;
 	height: 44px;
-	background-image: url(forward.png);
+	background-image: url(images/forward.png);
 	background-size: 44px 44px;
 	background-repeat: no-repeat;
 	background-position: center;
@@ -241,5 +241,5 @@
 }
 
 #forward:hover {
-	background-image: url(forward-hover.png);
+	background-image: url(images/forward-hover.png);
 }
