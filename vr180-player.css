@@ -58,7 +58,7 @@
 	bottom: 10%;
 	left: 50%;
 	transform: translateX(-50%);
-	max-width: 1000px;
+	width: 80%;
 	padding: 20px;
 	border-radius: 30px;
 	background: rgba(0, 0, 0, 0.70);
@@ -67,7 +67,7 @@
 	z-index: 100;
 	opacity: 0;
 	visibility: hidden;
-	transition: opacity 0.3s ease, visibility 0.3s ease;
+	transition: opacity 0.15s ease, visibility 0.15s ease;
 	pointer-events: none;
 }
 
@@ -75,11 +75,6 @@
 	opacity: 1;
 	visibility: visible;
 	pointer-events: auto;
-}
-
-#panel img {
-	width: 100%;
-	height: auto;
 }
 
 #status {
@@ -132,14 +127,9 @@
 }
 
 #panel button {
-	all: unset;
 	cursor: pointer;
-	border-radius: 4px;
-	transition: opacity 0.15s ease-in-out;
-}
-
-#panel button:hover {
-	opacity: 0.8;
+	border: none;
+	background-color: transparent;
 }
 
 #fullscreen {
@@ -217,11 +207,11 @@
 }
 
 #play2.playing {
-	background-image: url(pause2.png);
+	background-image: url(pause.png);
 }
 
 #play2.playing:hover {
-	background-image: url(pause2-hover.png);
+	background-image: url(pause-hover.png);
 }
 
 #forward {
@@ -236,29 +226,4 @@
 
 #forward:hover {
 	background-image: url(forward-hover.png);
-}
-
-/* Responsive adjustments for 2D controls */
-@media (max-width: 600px) {
-	#panel {
-		max-width: 90%;
-		padding: 16px;
-	}
-	
-	#controls {
-		grid-template-columns: 36px 1fr 132px 1fr 36px;
-		height: 36px;
-	}
-	
-	#fullscreen, #mute, #back, #play2, #forward {
-		width: 36px;
-		height: 36px;
-		background-size: 36px 36px;
-	}
-	
-	#nav {
-		grid-template-columns: 36px 36px 36px;
-		grid-gap: 8px;
-		height: 36px;
-	}
 }

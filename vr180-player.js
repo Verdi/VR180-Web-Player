@@ -737,6 +737,9 @@ function onWindowResize() {
 			renderer.setSize(videoWidth, videoHeight);
 			camera2D.aspect = videoWidth / videoHeight;
 			camera2D.updateProjectionMatrix();
+			
+			// Reposition control panel after resize
+			position2DControlPanel();
 		}
 	} else {
 		// Normal VR/window mode
@@ -1031,6 +1034,32 @@ function toggle2DFullscreen() {
 	}
 }
 
+function position2DControlPanel() {
+	if (!is2DMode || !controlPanel || !renderer) return;
+	
+	// Get the canvas dimensions and position
+	const canvas = renderer.domElement;
+	const canvasRect = canvas.getBoundingClientRect();
+	const containerRect = document.getElementById('vr-container').getBoundingClientRect();
+	
+	// Calculate 10% from the bottom of the canvas
+	const bottomOffset = canvasRect.height * 0.1;
+	
+	// Get the panel's height
+	const panelHeight = controlPanel.offsetHeight;
+	
+	// Calculate the top position: canvas bottom minus offset minus panel height, relative to container
+	const topPosition = (canvasRect.bottom - containerRect.top) - bottomOffset - panelHeight;
+	
+	// Position the panel so its bottom edge is 10% from canvas bottom
+	controlPanel.style.position = 'absolute';
+	controlPanel.style.top = `${topPosition}px`;
+	controlPanel.style.bottom = 'auto'; // Clear any previous bottom positioning
+	controlPanel.style.left = '50%';
+	controlPanel.style.transform = 'translateX(-50%)';
+	controlPanel.style.zIndex = '1000'; // Ensure it's above the canvas
+}
+
 function formatTime(seconds) {
 	if (!isFinite(seconds)) return '00:00:00';
 	
@@ -1255,6 +1284,9 @@ function start2DMode() {
 	
 	// Show 2D control panel
 	show2DControlPanel();
+	
+	// Position control panel relative to canvas
+	position2DControlPanel();
 	
 	// Start 2D render loop
 	render2D();
