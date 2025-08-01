@@ -832,15 +832,29 @@ function onWindowResize() {
 	if (renderer.xr && renderer.xr.isPresenting) return;
 	
 	if (is2DMode) {
-		// In 2D mode, resize to match video element dimensions
-		if (video) {
-			const videoRect = video.getBoundingClientRect();
-			const videoWidth = videoRect.width;
-			const videoHeight = videoRect.height;
+		// In 2D mode, calculate canvas size based on container dimensions
+		const container = document.getElementById('vr-container');
+		if (container) {
+			const containerRect = container.getBoundingClientRect();
+			const containerWidth = containerRect.width;
 			
-			renderer.setSize(videoWidth, videoHeight);
-			camera2D.aspect = videoWidth / videoHeight;
+			// Calculate height based on 16:9 aspect ratio
+			const aspectRatio = 16 / 9;
+			const calculatedHeight = containerWidth / aspectRatio;
+			
+			// Ensure minimum dimensions to prevent zero-sized canvas
+			const canvasWidth = Math.max(containerWidth, 320);
+			const canvasHeight = Math.max(calculatedHeight, 180);
+			
+			renderer.setSize(canvasWidth, canvasHeight);
+			camera2D.aspect = canvasWidth / canvasHeight;
 			camera2D.updateProjectionMatrix();
+			
+			// Update canvas styling to maintain proper positioning
+			const canvas = renderer.domElement;
+			canvas.style.width = '100%';
+			canvas.style.height = 'auto';
+			canvas.style.aspectRatio = '16/9';
 			
 			// Reposition control panel after resize
 			position2DControlPanel();
@@ -1398,17 +1412,27 @@ function start2DMode() {
 	// Set 2D mode flag
 	is2DMode = true;
 	
-	// Get the video element's computed dimensions
-	const videoRect = video.getBoundingClientRect();
-	const videoWidth = videoRect.width;
-	const videoHeight = videoRect.height;
-	
-	// Resize renderer to match video dimensions
-	renderer.setSize(videoWidth, videoHeight);
-	
-	// Update 2D camera aspect ratio to match video
-	camera2D.aspect = videoWidth / videoHeight;
-	camera2D.updateProjectionMatrix();
+	// Calculate canvas size based on container dimensions (same logic as onWindowResize)
+	const container = document.getElementById('vr-container');
+	if (container) {
+		const containerRect = container.getBoundingClientRect();
+		const containerWidth = containerRect.width;
+		
+		// Calculate height based on 16:9 aspect ratio
+		const aspectRatio = 16 / 9;
+		const calculatedHeight = containerWidth / aspectRatio;
+		
+		// Ensure minimum dimensions to prevent zero-sized canvas
+		const canvasWidth = Math.max(containerWidth, 320);
+		const canvasHeight = Math.max(calculatedHeight, 180);
+		
+		// Resize renderer with calculated dimensions
+		renderer.setSize(canvasWidth, canvasHeight);
+		
+		// Update 2D camera aspect ratio
+		camera2D.aspect = canvasWidth / canvasHeight;
+		camera2D.updateProjectionMatrix();
+	}
 	
 	// Position the canvas to match the video element
 	const canvas = renderer.domElement;
@@ -1442,6 +1466,12 @@ function start2DMode() {
 	
 	// Add event listeners for 2D controls
 	add2DEventListeners();
+	
+	// Add fullscreen event listeners to handle resize properly
+	document.addEventListener('fullscreenchange', onFullscreenChange);
+	document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+	document.addEventListener('mozfullscreenchange', onFullscreenChange);
+	document.addEventListener('MSFullscreenChange', onFullscreenChange);
 	
 	// Show 2D control panel
 	show2DControlPanel();
@@ -1478,6 +1508,21 @@ function remove2DEventListeners() {
 	renderer.domElement.removeEventListener('touchstart', onTouchStart);
 	renderer.domElement.removeEventListener('touchmove', onTouchMove);
 	renderer.domElement.removeEventListener('touchend', onTouchEnd);
+	
+	// Fullscreen events
+	document.removeEventListener('fullscreenchange', onFullscreenChange);
+	document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+	document.removeEventListener('mozfullscreenchange', onFullscreenChange);
+	document.removeEventListener('MSFullscreenChange', onFullscreenChange);
+}
+
+function onFullscreenChange() {
+	if (!is2DMode) return;
+	
+	// Trigger resize handling when fullscreen state changes
+	setTimeout(() => {
+		onWindowResize();
+	}, 100); // Small delay to ensure fullscreen transition is complete
 }
 
 async function actualSessionToggle() {
