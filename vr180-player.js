@@ -990,7 +990,7 @@ function on2DMouseMove() {
 }
 
 function on2DTouchStart() {
-	if (is2DMode) {
+	if (is2DMode && !isDragging) {
 		show2DControlPanel();
 	}
 }
