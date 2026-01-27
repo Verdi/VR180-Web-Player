@@ -411,7 +411,7 @@ function init() {
 		vr180Mesh.onBeforeRender = function (renderer, scene, activeCamera, geometry, material, group) {
 			if (!material.map) return;
 			const isPresentingXR = renderer.xr.isPresenting;
-
+			
 			// Handle 2D mode - show only left eye view
 			if (is2DMode && !isPresentingXR) {
 				material.map.offset.x = 0;
@@ -420,7 +420,7 @@ function init() {
 				material.map.repeat.y = 1;
 				return;
 			}
-
+			
 			// Default to full texture for non-VR, non-2D mode
 			material.map.offset.x = 0; material.map.repeat.x = 1;
 			material.map.offset.y = 0; material.map.repeat.y = 1;
@@ -428,20 +428,25 @@ function init() {
 				return;
 			}
 
-			// Use view matrix eye offset for reliable stereo detection
-			// This works consistently across Quest Browser updates and Safari/VisionOS
-			// Left eye has negative X offset, right eye has positive X offset
-			const viewMatrix = activeCamera.matrixWorldInverse;
-			const eyeOffsetX = viewMatrix.elements[12];
+			const xrCamera = renderer.xr.getCamera();
 
-			if (eyeOffsetX < 0) {
-				// Left eye - show left half of SBS video
-				material.map.offset.x = 0;
+			if (xrCamera && xrCamera.cameras && xrCamera.cameras.length >= 2) {
+				if (activeCamera === xrCamera.cameras[0]) {
+					material.map.offset.x = 0;
+				} else if (activeCamera === xrCamera.cameras[1]) {
+					material.map.offset.x = 0.5;
+				} else {
+					material.map.offset.x = 0;
+				}
+				material.map.repeat.x = 0.5;
 			} else {
-				// Right eye - show right half of SBS video
-				material.map.offset.x = 0.5;
+				const projMatrixEl8 = activeCamera.projectionMatrix.elements[8];
+				if (projMatrixEl8 < -0.0001) {
+					material.map.offset.x = 0; material.map.repeat.x = 0.5;
+				} else if (projMatrixEl8 > 0.0001) {
+					material.map.offset.x = 0.5; material.map.repeat.x = 0.5;
+				}
 			}
-			material.map.repeat.x = 0.5;
 		};
 
 		// Initialize 2D camera
@@ -1726,12 +1731,6 @@ function renderXR(timestamp, frame) {
 		}
 	}
 	try {
-		// Ensure video texture is synchronized with render loop
-		// This prevents glitches from texture update timing issues on Quest browsers
-		if (videoTexture && video && !video.paused && !video.ended) {
-			videoTexture.needsUpdate = true;
-		}
-
 		handleControllerInteractions();
 		renderer.render(scene, camera);
 	} catch (error) {
