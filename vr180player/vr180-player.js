@@ -429,24 +429,41 @@ function init() {
 			}
 
 			const xrCamera = renderer.xr.getCamera();
+			let isLeftEye = true; // Default to left eye
 
 			if (xrCamera && xrCamera.cameras && xrCamera.cameras.length >= 2) {
+				// Method 1: Direct camera reference comparison
 				if (activeCamera === xrCamera.cameras[0]) {
-					material.map.offset.x = 0;
+					isLeftEye = true;
 				} else if (activeCamera === xrCamera.cameras[1]) {
-					material.map.offset.x = 0.5;
+					isLeftEye = false;
 				} else {
-					material.map.offset.x = 0;
+					// Method 2: View matrix position (matrixWorldInverse.elements[12] is the X translation)
+					const viewMatrixX = activeCamera.matrixWorldInverse.elements[12];
+					const leftCamX = xrCamera.cameras[0].matrixWorldInverse.elements[12];
+					const rightCamX = xrCamera.cameras[1].matrixWorldInverse.elements[12];
+
+					const diffToLeft = Math.abs(viewMatrixX - leftCamX);
+					const diffToRight = Math.abs(viewMatrixX - rightCamX);
+
+					if (diffToLeft < 0.001 || diffToLeft < diffToRight) {
+						isLeftEye = true;
+					} else if (diffToRight < 0.001) {
+						isLeftEye = false;
+					} else {
+						// Method 3: Projection matrix asymmetry (elements[8] indicates eye offset)
+						const projMatrixEl8 = activeCamera.projectionMatrix.elements[8];
+						isLeftEye = projMatrixEl8 <= 0;
+					}
 				}
-				material.map.repeat.x = 0.5;
 			} else {
+				// Fallback when xrCamera.cameras is not available
 				const projMatrixEl8 = activeCamera.projectionMatrix.elements[8];
-				if (projMatrixEl8 < -0.0001) {
-					material.map.offset.x = 0; material.map.repeat.x = 0.5;
-				} else if (projMatrixEl8 > 0.0001) {
-					material.map.offset.x = 0.5; material.map.repeat.x = 0.5;
-				}
+				isLeftEye = projMatrixEl8 <= 0;
 			}
+
+			material.map.offset.x = isLeftEye ? 0 : 0.5;
+			material.map.repeat.x = 0.5;
 		};
 
 		// Initialize 2D camera
@@ -1731,6 +1748,10 @@ function renderXR(timestamp, frame) {
 		}
 	}
 	try {
+		// Sync video texture before render to ensure frame consistency
+		if (videoTexture && video && !video.paused && !video.ended) {
+			videoTexture.needsUpdate = true;
+		}
 		handleControllerInteractions();
 		renderer.render(scene, camera);
 	} catch (error) {
