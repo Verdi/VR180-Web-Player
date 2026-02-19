@@ -1,4 +1,5 @@
 import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+const _playerBase = new URL('.', import.meta.url).href;
 
 let scene, camera, renderer, video, videoTexture, sphereMaterial;
 let vr180Mesh;
@@ -111,7 +112,7 @@ function createPlayButton() {
 	playButton.setAttribute('aria-label', 'Play video');
 	
 	const playImg = document.createElement('img');
-	playImg.src = 'vr180player/images/play.png';
+	playImg.src = _playerBase + 'images/play.png';
 	playImg.alt = 'Play';
 	
 	playButton.appendChild(playImg);
