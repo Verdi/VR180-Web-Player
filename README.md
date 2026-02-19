@@ -4,10 +4,9 @@ A web-based video player for 180 degree, 3D video.
 Got an immersive video you want people to see with the Apple Vision Pro or Meta Quest headsets? Now you can put it on your website just like any other video! People will see the immersive 3D video if they have a capable headset or they'll get a 2D version on other devices.
 
 ## How to use it
-1. Drop the `vr180player` directory in the root level of your website.
-2. Link to the player CSS file `<link rel="stylesheet" href="vr180player/vr180-player.css">`.
-3. Add the player script `<script type="module" src="vr180player/vr180-player.js"></script>` before the closing body tag.
-4. And use this HTML snippet to embed your video: 
+1. Link to the player CSS file `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.0.1/vr180player/vr180-player.css">`.
+2. Add the player script `<script type="module" src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.0.1/vr180player/vr180-player.js"></script>` before the closing body tag.
+3. And use this HTML snippet to embed your video: 
 ```
 <div id="vr-container">
 	<video id="vr180" poster="poster.jpg" title="Demo Video" crossOrigin="anonymous" playsinline>
