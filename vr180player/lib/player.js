@@ -5,6 +5,7 @@ import { VRPanel } from './vr-panel.js';
 import { DomControls } from './dom-controls.js';
 import { FlatMode } from './flat-mode.js';
 import { XRMode, isXRSupported } from './xr-mode.js';
+import { createSource } from './source.js';
 
 const PLAY_ICON_URL = new URL('../images/play.png', import.meta.url).href;
 
@@ -12,6 +13,7 @@ const DEFAULT_OPTIONS = {
 	projection: '180',
 	stereo: 'sbs',
 	skipSeconds: 15,
+	hls: 'auto', // 'auto' uses hls.js first. 'native' uses the browser's own HLS first (Safari).
 	title: '',
 };
 
@@ -35,6 +37,8 @@ export class VR180Player {
 		// Three.js objects are made on the first play, so a page with many players
 		// does not use a WebGL context for each one.
 		this.renderer = null;
+		this.source = null; // Set when the video source is ready. See source.js.
+		this.sourceError = null;
 
 		this.playButton = this.#createPlayButton();
 		this.controls = new DomControls(this.container, {
@@ -43,6 +47,20 @@ export class VR180Player {
 		});
 		this.#listenToVideo();
 		video.vr180Player = this;
+
+		createSource(video, this.options.hls)
+			.then((source) => {
+				this.source = source;
+				source.onFatalError = (err) => {
+					this.sourceError = err;
+					this.#updatePlayButton();
+				};
+			})
+			.catch((err) => {
+				console.error('VR180Player:', err);
+				this.sourceError = err;
+			})
+			.finally(() => this.#updatePlayButton());
 
 		isXRSupported().then((supported) => {
 			this.xrSupported = supported;
@@ -124,7 +142,7 @@ export class VR180Player {
 		video.currentTime = 0;
 		video.controls = false;
 		video.style.display = '';
-		video.load(); // Shows the poster frame again.
+		this.source?.reset(); // Shows the poster frame again.
 
 		this.playButton.classList.remove('hidden');
 		this.#updatePlayButton();
@@ -141,6 +159,7 @@ export class VR180Player {
 		this.listeners.abort();
 		this.controls.destroy();
 		this.playButton.remove();
+		this.source?.destroy();
 		if (this.renderer) {
 			this.renderer.setAnimationLoop(null);
 			this.texture.dispose();
@@ -213,9 +232,11 @@ export class VR180Player {
 		return playButton;
 	}
 
-	// The play button works after the browser says if it can do VR, and while the video has no error.
+	// The play button works when the browser has said if it can do VR, the source is ready,
+	// and there is no error.
 	#updatePlayButton() {
-		this.playButton.disabled = this.xrSupported === null || Boolean(this.video.error);
+		this.playButton.disabled = this.xrSupported === null || !this.source
+			|| Boolean(this.sourceError) || Boolean(this.video.error);
 	}
 
 	#listenToVideo() {
@@ -225,10 +246,12 @@ export class VR180Player {
 		for (const type of ['loadedmetadata', 'timeupdate', 'play', 'pause', 'volumechange']) {
 			video.addEventListener(type, syncUI, options);
 		}
+		video.addEventListener('play', () => this.source?.startLoad(), options);
 		video.addEventListener('ended', () => this.#onEnded(), options);
 		video.addEventListener('error', () => {
-			const error = video.error;
-			console.error('VR180Player: video error:', error ? `code ${error.code}: ${error.message}` : 'unknown');
+			// The error can be from an old source that is already replaced (for example, by hls.js).
+			if (!video.error) return;
+			console.error('VR180Player: video error:', `code ${video.error.code}: ${video.error.message}`);
 			this.#updatePlayButton();
 		}, options);
 	}
@@ -260,10 +283,15 @@ function findOrCreateContainer(video) {
 	return wrapper;
 }
 
+const GENERIC_FILE_NAMES = new Set(['master', 'main', 'index', 'playlist', 'manifest', 'stream', 'video']);
+
 // Makes a title from the file name, for example "my-trip.mp4" becomes "my trip".
 function titleFromSource(video) {
 	const src = video.currentSrc || video.src || video.querySelector('source')?.src;
 	if (!src) return '';
-	const fileName = new URL(src, document.baseURI).pathname.split('/').pop() ?? '';
-	return decodeURIComponent(fileName.replace(/\.[^.]+$/, '')).replace(/[-_]+/g, ' ');
+	const parts = new URL(src, document.baseURI).pathname.split('/').filter(Boolean);
+	let name = (parts.pop() ?? '').replace(/\.[^.]+$/, '');
+	// HLS files often have a general name, such as "master.m3u8". Then the folder name is better.
+	if (GENERIC_FILE_NAMES.has(name.toLowerCase()) && parts.length) name = parts.pop();
+	return decodeURIComponent(name).replace(/[-_]+/g, ' ');
 }

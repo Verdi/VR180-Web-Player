@@ -24,6 +24,17 @@
 		<video data-vr180 data-skip-seconds="5" title="Bottom player (skips 5 s)" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="sbs-video.mp4" type="video/mp4">
 		</video>
+		<p>HLS player. It plays <code>test-media/hls/master.m3u8</code>. To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>&amp;mode=native</code> to use the browser's own HLS.</p>
+		<video id="hls-test" data-vr180 title="HLS player" preload="none" poster="poster.jpg" crossOrigin="anonymous" playsinline>
+			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
+		</video>
+		<script>
+			// Uses the stream and mode from the page address, if there are any.
+			const params = new URLSearchParams(location.search);
+			const hlsVideo = document.getElementById('hls-test');
+			if (params.get('hls')) hlsVideo.querySelector('source').src = params.get('hls');
+			if (params.get('mode')) hlsVideo.dataset.hls = params.get('mode');
+		</script>
 	</main>
 	<script type="module" src="vr180player/vr180-player.js"></script>
 </body>
