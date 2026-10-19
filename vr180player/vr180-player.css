@@ -1,16 +1,32 @@
-#vr-container {
+/* VR180 Web Player. Every rule is scoped to .vr180-container, so the player does not change the rest of the page. */
+
+.vr180-container {
 	position: relative;
 	display: inline-block;
 	width: 100%;
 }
 
-video {
+.vr180-container video,
+.vr180-container .vr180-canvas {
+	display: block;
 	width: 100%;
 	height: auto;
-    aspect-ratio: 16/9;
+	aspect-ratio: 16/9;
 }
 
-#playBtn {
+.vr180-container .vr180-canvas {
+	/* The viewer drags the 2D view, so the page must not scroll on touch. */
+	touch-action: none;
+	cursor: grab;
+}
+
+.vr180-container .vr180-canvas:active {
+	cursor: grabbing;
+}
+
+/* Play button over the poster */
+
+.vr180-play {
 	position: absolute;
 	top: 50%;
 	left: 50%;
@@ -25,41 +41,41 @@ video {
 	z-index: 10;
 }
 
-#playBtn:hover {
+.vr180-play:hover {
 	transform: translate(-50%, -50%) scale(1.1);
 }
 
-#playBtn:active {
+.vr180-play:active {
 	transform: translate(-50%, -50%) scale(0.95);
 }
 
-#playBtn.hidden {
+.vr180-play.hidden {
 	opacity: 0;
 	pointer-events: none;
 }
 
-#playBtn img {
+.vr180-play img {
 	width: 100%;
 	height: 100%;
 }
 
-/* Responsive sizing */
 @media (max-width: 600px) {
-	#playBtn {
+	.vr180-play {
 		width: 60px;
 		height: 60px;
 	}
 }
 
 @media (min-width: 900px) {
-	#playBtn {
+	.vr180-play {
 		width: 100px;
 		height: 100px;
 	}
 }
 
-/* 2D Video Controls Panel */
-#panel {
+/* 2D control panel */
+
+.vr180-panel {
 	position: absolute;
 	bottom: 10%;
 	left: 50%;
@@ -77,38 +93,37 @@ video {
 	pointer-events: none;
 }
 
-#panel.visible {
+.vr180-panel.visible {
 	opacity: 1;
 	visibility: visible;
 	pointer-events: auto;
 }
 
-#status {
+.vr180-status {
 	margin: 0 12px 12px 12px;
 }
 
-#video-title {
+.vr180-title {
 	text-align: center;
 	margin: 0 0 16px 0;
 	font-size: 1rem;
 	font-weight: 500;
 }
 
-#current-time,
-#total-time {
+.vr180-time {
 	margin: 0;
 	font-size: 0.875rem;
 	font-variant-numeric: tabular-nums;
 }
 
-#progress {
+.vr180-progress {
 	display: grid;
 	grid-template-columns: min-content 1fr min-content;
-	grid-gap: 8px;
+	gap: 8px;
 	align-items: center;
 }
 
-#bar {
+.vr180-bar {
 	width: 100%;
 	height: 4px;
 	border-radius: 2px;
@@ -117,7 +132,7 @@ video {
 	position: relative;
 }
 
-#played {
+.vr180-played {
 	border-radius: 2px;
 	background: #fff;
 	height: 4px;
@@ -125,127 +140,50 @@ video {
 	transition: width 0.1s ease;
 }
 
-#controls {
+.vr180-controls {
 	display: grid;
 	grid-template-areas: "full lflex nav rflex mute";
 	grid-template-columns: 44px 1fr 156px 1fr 44px;
 	height: 44px;
 }
 
-#panel button {
-	cursor: pointer;
-	border: none;
-	background-color: transparent;
-}
-
-#fullscreen {
-	grid-area: full;
-	width: 44px;
-	height: 44px;
-	background-image: url(images/fullscreen.png);
-	background-size: 44px 44px;
-	background-repeat: no-repeat;
-	background-position: center;
-	transition: background-image 0.15s ease-in-out;
-}
-
-#fullscreen:hover {
-	background-image: url(images/fullscreen-hover.png);
-}
-
-#mute {
-	grid-area: mute;
-	width: 44px;
-	height: 44px;
-	background-image: url(images/mute.png);
-	background-size: 44px 44px;
-	background-repeat: no-repeat;
-	background-position: center;
-	transition: background-image 0.15s ease-in-out;
-}
-
-#mute:hover {
-	background-image: url(images/mute-hover.png);
-}
-
-#mute.muted {
-	background-image: url(images/mute.png);
-}
-
-#mute.muted:hover {
-	background-image: url(images/mute-hover.png);
-}
-
-#mute.unmuted {
-	background-image: url(images/unmute.png);
-}
-
-#mute.unmuted:hover {
-	background-image: url(images/unmute-hover.png);
-}
-
-#nav {
+.vr180-nav {
 	grid-area: nav;
 	display: grid;
 	grid-template-columns: 44px 44px 44px;
-	grid-gap: 12px;
+	gap: 12px;
 	height: 44px;
 }
 
-#back {
+.vr180-button {
 	width: 44px;
 	height: 44px;
-	background-image: url(images/back.png);
+	padding: 0;
+	cursor: pointer;
+	border: none;
+	background-color: transparent;
 	background-size: 44px 44px;
 	background-repeat: no-repeat;
 	background-position: center;
 	transition: background-image 0.15s ease-in-out;
 }
 
-#back:hover {
-	background-image: url(images/back-hover.png);
-}
+.vr180-fullscreen { grid-area: full; background-image: url(images/fullscreen.png); }
+.vr180-fullscreen:hover { background-image: url(images/fullscreen-hover.png); }
 
-#play2 {
-	width: 44px;
-	height: 44px;
-	background-image: url(images/play2.png);
-	background-size: 44px 44px;
-	background-repeat: no-repeat;
-	background-position: center;
-	transition: background-image 0.15s ease-in-out;
-}
+.vr180-back { background-image: url(images/back.png); }
+.vr180-back:hover { background-image: url(images/back-hover.png); }
 
-#play2:hover {
-	background-image: url(images/play2-hover.png);
-}
+.vr180-forward { background-image: url(images/forward.png); }
+.vr180-forward:hover { background-image: url(images/forward-hover.png); }
 
-#play2.paused {
-	background-image: url(images/play2.png);
-}
+.vr180-play-pause { background-image: url(images/play2.png); }
+.vr180-play-pause:hover { background-image: url(images/play2-hover.png); }
+.vr180-play-pause.is-playing { background-image: url(images/pause.png); }
+.vr180-play-pause.is-playing:hover { background-image: url(images/pause-hover.png); }
 
-#play2.paused:hover {
-	background-image: url(images/play2-hover.png);
-}
-
-#play2.playing {
-	background-image: url(images/pause.png);
-}
-
-#play2.playing:hover {
-	background-image: url(images/pause-hover.png);
-}
-
-#forward {
-	width: 44px;
-	height: 44px;
-	background-image: url(images/forward.png);
-	background-size: 44px 44px;
-	background-repeat: no-repeat;
-	background-position: center;
-	transition: background-image 0.15s ease-in-out;
-}
-
-#forward:hover {
-	background-image: url(images/forward-hover.png);
-}
+/* The mute button shows what a click does: "mute" when sound is on, "unmute" when muted. */
+.vr180-mute { grid-area: mute; background-image: url(images/mute.png); }
+.vr180-mute:hover { background-image: url(images/mute-hover.png); }
+.vr180-mute.is-muted { background-image: url(images/unmute.png); }
+.vr180-mute.is-muted:hover { background-image: url(images/unmute-hover.png); }

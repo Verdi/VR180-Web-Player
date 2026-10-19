@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>VR180 Web Player (local test)</title>
+	<!-- Local test page: loads the player from this folder, not the CDN. -->
+	<link rel="stylesheet" href="vr180player/vr180-player.css">
+	<style>
+		body { font-family: system-ui, sans-serif; }
+		main { max-width: 750px; margin: auto; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>VR180 Web Player (local test)</h1>
+		<p>Original embed:</p>
+		<div id="vr-container">
+			<video id="vr180" poster="poster.jpg" title="Demo Video" crossOrigin="anonymous" playsinline>
+				<source src="sbs-video.mp4" type="video/mp4">
+			</video>
+		</div>
+		<p>Second player on the same page, with no container:</p>
+		<video data-vr180 data-skip-seconds="5" poster="poster.jpg" crossOrigin="anonymous" playsinline>
+			<source src="sbs-video.mp4" type="video/mp4">
+		</video>
+	</main>
+	<script type="module" src="vr180player/vr180-player.js"></script>
+</body>
+</html>
