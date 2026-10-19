@@ -14,14 +14,14 @@
 <body>
 	<main>
 		<h1>VR180 Web Player (local test)</h1>
-		<p>Original embed:</p>
+		<p>Top player: the original embed. Skips 15 seconds.</p>
 		<div id="vr-container">
-			<video id="vr180" poster="poster.jpg" title="Demo Video" crossOrigin="anonymous" playsinline>
+			<video id="vr180" poster="poster.jpg" title="Top player (skips 15 s)" crossOrigin="anonymous" playsinline>
 				<source src="sbs-video.mp4" type="video/mp4">
 			</video>
 		</div>
-		<p>Second player on the same page, with no container:</p>
-		<video data-vr180 data-skip-seconds="5" poster="poster.jpg" crossOrigin="anonymous" playsinline>
+		<p>Bottom player: a second player with <code>data-skip-seconds="5"</code>. Skips 5 seconds.</p>
+		<video data-vr180 data-skip-seconds="5" title="Bottom player (skips 5 s)" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="sbs-video.mp4" type="video/mp4">
 		</video>
 	</main>

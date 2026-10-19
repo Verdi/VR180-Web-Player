@@ -125,6 +125,9 @@ export class XRMode {
 			return;
 		}
 
+		// Three.js has the new pose, but has not applied it to matrixWorld yet. On Vision Pro the
+		// pointer only exists during the pinch, so without this the ray uses the previous pinch.
+		controller.updateMatrixWorld(true);
 		this.raycaster.setFromXRController(controller);
 		const hit = this.raycaster.intersectObjects(panel.interactables, false)[0];
 		const action = hit?.object.userData.action;
