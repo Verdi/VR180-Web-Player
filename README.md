@@ -15,6 +15,40 @@ Got an immersive video you want people to see with the Apple Vision Pro or Meta 
 </div>
 ```
 
+### More than one player on a page
+Add `data-vr180` to each video. You do not need the `vr-container` div.
+```
+<video data-vr180 poster="poster.jpg" title="My Video" crossOrigin="anonymous" playsinline>
+	<source src="my-video.mp4" type="video/mp4">
+</video>
+```
+Options go in data attributes. For example, `data-skip-seconds="10"` changes how far the back and forward buttons skip (the default is 15).
+
+### Starting a player from JavaScript
+```
+import { VR180Player } from 'https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.0.3/vr180player/vr180-player.js';
+const player = new VR180Player(document.querySelector('video'), { skipSeconds: 10 });
+// Later, to remove it (for example, when your page changes without a reload):
+player.destroy();
+```
+
+## How the code is organized
+`vr180player/vr180-player.js` is the file you add to your page. It starts the players. The rest is in `vr180player/lib/`:
+
+| File | What it does |
+| --- | --- |
+| `player.js` | One player for one video. Starts VR or 2D mode and runs the control actions. |
+| `formats.js` | Video formats: the shape the video is drawn on, and where each eye's picture is in the frame. |
+| `video-screen.js` | Makes the 3D surface for the video. Each eye gets its own copy. |
+| `xr-mode.js` | VR mode on a headset. |
+| `vr-panel.js` | The control panel you see in VR. |
+| `flat-mode.js` | 2D mode on a normal screen, with drag to look around. |
+| `dom-controls.js` | The control panel you see in 2D. |
+| `icons.js` | Icons for the VR panel. |
+| `three.js` | Loads Three.js, locked to one version. |
+
+To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`.
+
 ## How it works
 When the webpage loads, the video file is embeded normally, with a play button positioned over the poster frame. When the user clicks play, the player script checks if `navigator.xr` exists. If it does, a VR experience is initiated. If not, it builds a rectilinear, 2D view of your video and plays it that way. 
 
