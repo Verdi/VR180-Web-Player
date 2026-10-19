@@ -1,4 +1,5 @@
-import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+// Three.js is locked to one version, so a new Three.js release cannot break the player.
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js';
 const _playerBase = new URL('.', import.meta.url).href;
 
 let scene, camera, renderer, video, videoTexture, sphereMaterial;
