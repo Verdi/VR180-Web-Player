@@ -3,8 +3,9 @@
 // HLS can play in two ways:
 // - native: the browser streams the video itself. Safari does this well, so the player uses it there.
 //   (In Safari on Vision Pro, hls.js stopped when it changed quality. Native HLS did not.)
-//   Safari chooses the quality itself, and on Vision Pro it chose the low quality on a second play.
-//   So by default the player gives it a playlist with only the highest quality (see hls-playlist.js).
+//   Safari chooses the quality itself. On Vision Pro it chose a low quality when the same <video>
+//   played a second time, so the player uses a new <video> for each play (needsNewVideoEachPlay).
+//   With hlsQuality 'best', the player gives it a playlist with only the highest quality (hls-playlist.js).
 // - hls.js: a script that streams the video into the page (Media Source Extensions).
 //   The player uses it in all other browsers, such as Chrome and the Quest browser.
 // hls.js is loaded from the CDN only when the player uses it.
@@ -46,8 +47,8 @@ function hasMediaSource() {
 // - 'auto': native HLS in Safari, hls.js in other browsers.
 // - 'native': native HLS first.
 // - 'hls.js': hls.js first.
-// `nativeQuality` is for native HLS: 'best' gives it only the highest quality; 'auto' lets it choose.
-export async function createSource(video, hlsMode = 'auto', { nativeQuality = 'best' } = {}) {
+// `nativeQuality` is for native HLS: 'auto' lets it choose; 'best' gives it only the highest quality.
+export async function createSource(video, hlsMode = 'auto', { nativeQuality = 'auto' } = {}) {
 	const url = findHlsUrl(video);
 	if (!url) return new FileSource(video);
 
@@ -87,6 +88,7 @@ export async function createSource(video, hlsMode = 'auto', { nativeQuality = 'b
 // - stopLoad(): called when the player goes back to the poster. The stream stays ready to play.
 // - destroy(): stops all loading.
 // - onFatalError: set by the player. Called when the video cannot play.
+// - needsNewVideoEachPlay: true if the player must use a new <video> for each play.
 
 // A normal video file. The browser does all the work.
 class FileSource {
@@ -94,6 +96,7 @@ class FileSource {
 		this.kind = 'file';
 		this.video = video;
 		this.onFatalError = null;
+		this.needsNewVideoEachPlay = false;
 	}
 
 	startLoad() {}
@@ -109,6 +112,7 @@ class FileSource {
 class NativeHlsSource extends FileSource {
 	constructor(video, url, bestUrls = []) {
 		super(video);
+		this.needsNewVideoEachPlay = true;
 		this.tries = [...bestUrls, { how: null, url }];
 		this.onError = () => this.#tryNext();
 		if (bestUrls.length) video.addEventListener('error', this.onError);
@@ -146,6 +150,7 @@ class NativeHlsSource extends FileSource {
 class HlsJsSource {
 	constructor(Hls, video, url) {
 		this.kind = 'hls.js';
+		this.needsNewVideoEachPlay = false;
 		this.Hls = Hls;
 		this.video = video;
 		this.url = url;

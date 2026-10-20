@@ -25,7 +25,7 @@
 			<source src="sbs-video.mp4" type="video/mp4">
 		</video>
 		<p>HLS player. It plays <code>test-media/hls/master.m3u8</code>. To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>?mode=hls.js</code> or <code>?mode=native</code> to choose how HLS plays. Without it, Safari uses its own HLS, and other browsers use hls.js.</p>
-		<p>Test options: <code>?debug</code> shows the video size in the panel title. <code>?quality=auto</code> lets Safari's own HLS choose the quality (the default is <code>best</code>). <code>?fresh</code> uses a new video element for each play. Join options with <code>&amp;</code>, for example <code>?debug&amp;quality=auto</code>.</p>
+		<p>Test options: <code>?debug</code> shows the video size in the panel title. <code>?quality=best</code> gives Safari's own HLS only the highest quality (the default is <code>auto</code>). Join options with <code>&amp;</code>, for example <code>?debug&amp;quality=best</code>.</p>
 		<video id="hls-test" data-vr180 title="HLS player" preload="none" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
 		</video>
@@ -39,7 +39,6 @@
 			for (const video of document.querySelectorAll('video')) {
 				if (params.has('debug')) video.dataset.debug = '';
 				if (params.get('quality')) video.dataset.hlsQuality = params.get('quality');
-				if (params.has('fresh')) video.dataset.freshVideo = '';
 			}
 		</script>
 	</main>

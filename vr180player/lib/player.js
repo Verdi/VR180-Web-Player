@@ -14,9 +14,8 @@ const DEFAULT_OPTIONS = {
 	stereo: 'sbs',
 	skipSeconds: 15,
 	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
-	hlsQuality: 'best', // For the browser's own HLS: 'best' (only the highest quality) or 'auto'.
+	hlsQuality: 'auto', // For the browser's own HLS: 'auto' (the browser chooses) or 'best' (only the highest).
 	debug: false, // Shows the video size and source type in the panel title.
-	freshVideo: false, // Test option: after each play, replace the <video> with a new copy.
 	title: '',
 };
 
@@ -140,7 +139,7 @@ export class VR180Player {
 		this.poster?.classList.remove('hidden');
 		this.source?.stopLoad();
 
-		if (this.options.freshVideo) this.#replaceVideo();
+		if (this.source?.needsNewVideoEachPlay) this.#replaceVideo();
 		this.playButton.classList.remove('hidden');
 		this.#updatePlayButton();
 	}
@@ -158,7 +157,6 @@ export class VR180Player {
 	debugTitle() {
 		const { video } = this;
 		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
-		if (this.options.freshVideo) parts.push('fresh');
 		return parts.join(' · ');
 	}
 
@@ -294,8 +292,8 @@ export class VR180Player {
 			.finally(() => this.#updatePlayButton());
 	}
 
-	// Test option freshVideo: puts a new copy of the <video> in the page, with a new source.
-	// This tests whether Safari's own HLS chooses a better quality with a new element.
+	// Puts a new copy of the <video> in the page, with a new source. Safari's own HLS needs this:
+	// on Vision Pro, a second play on the same element chose a low quality. A new element did not.
 	#replaceVideo() {
 		const old = this.video;
 		const fresh = old.cloneNode(true);

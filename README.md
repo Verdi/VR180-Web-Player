@@ -37,8 +37,8 @@ Use your HLS stream (`.m3u8`) as the video source:
 - To choose, add `data-hls="native"` (the browser's own HLS) or `data-hls="hls.js"`. If that way cannot work in the browser, the player uses the other one.
 - Quality:
   - With hls.js, the player starts at the highest quality. It goes down only if the connection is too slow.
-  - With the browser's own HLS, the player lets the browser use **only the highest resolution**. Without this, Safari on Vision Pro played a low quality when the video played a second time. On a slow connection, the video pauses to load instead of getting blurry.
-  - To let the browser choose the quality, add `data-hls-quality="auto"`.
+  - With the browser's own HLS, the browser chooses the quality. The player uses a new `<video>` element for each play, because on Vision Pro, Safari chose a low quality when the same element played a second time.
+  - To give the browser's own HLS only the highest resolution, add `data-hls-quality="best"`. Then the video does not get blurry, but on a slow connection it pauses to load.
 - To see which quality plays, add `data-debug`. The control panel title then shows the video size and how the stream plays.
 
 ### Starting a player from JavaScript
