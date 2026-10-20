@@ -1,11 +1,18 @@
-/* VR180 Web Player. Every rule is scoped to .vr180-container, so the player does not change the rest of the page. */
+/* VR180 Web Player. Every rule is scoped to the player, so it does not change the rest of the page. */
 
+/* #vr-container, video#vr180, and video[data-vr180] are the page's own markup. They are styled here
+   too, so the videos have their normal size before the player script runs. Without this, each video
+   shows its poster at full size for a moment while the page loads. */
+
+#vr-container,
 .vr180-container {
 	position: relative;
 	display: inline-block;
 	width: 100%;
 }
 
+video#vr180,
+video[data-vr180],
 .vr180-container video,
 .vr180-container .vr180-canvas {
 	display: block;
@@ -205,10 +212,13 @@
 .vr180-quality {
 	grid-area: quality;
 	margin-right: 8px;
-	padding: 4px 6px;
+	padding: 4px 22px 4px 6px;
 	border: 1.5px solid #fff;
 	border-radius: 6px;
-	background: transparent;
+	/* Our own white arrows. Safari on iPhone draws its own arrow in black. */
+	appearance: none;
+	-webkit-appearance: none;
+	background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14'%3E%3Cpath d='M1 5l4-4 4 4M1 9l4 4 4-4' fill='none' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 6px center;
 	color: #fff;
 	font: 600 0.75rem system-ui, sans-serif;
 	cursor: pointer;
