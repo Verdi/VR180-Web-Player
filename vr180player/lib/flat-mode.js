@@ -63,8 +63,13 @@ export class FlatMode {
 	}
 
 	render() {
+		const { player } = this;
 		this.#updateCamera();
-		this.player.renderer.render(this.player.scene, this.camera);
+		// Three.js updates the picture when the browser says that a new video frame is ready.
+		// In Safari on Mac, that stopped after an HLS quality change (the picture froze, the sound
+		// played on). So update the picture on every frame while the video plays, as in VR.
+		if (!player.video.paused && !player.video.ended) player.texture.needsUpdate = true;
+		player.renderer.render(player.scene, this.camera);
 	}
 
 	#updateCamera() {
