@@ -44,9 +44,9 @@ function parseVariants(lines) {
 	return variants;
 }
 
-// A short name for a quality, from the width of the frame. For example 8192 is "8K".
+// A short name for a quality, from the width of the frame. For example 8192 is "8K", and 1024 is "1K".
 export function qualityLabel(width, height) {
-	if (width >= 1500) return `${Math.round(width / 1000)}K`;
+	if (width >= 1000) return `${Math.round(width / 1000)}K`;
 	return `${height}p`;
 }
 

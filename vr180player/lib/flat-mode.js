@@ -36,7 +36,7 @@ export class FlatMode {
 
 		player.hideVideo();
 		canvas.style.display = '';
-		player.screen.visible = true;
+		player.flatScreen.visible = true;
 
 		this.listeners = new AbortController();
 		const options = { signal: this.listeners.signal };
@@ -53,12 +53,12 @@ export class FlatMode {
 	}
 
 	stop() {
-		const { renderer, screen } = this.player;
+		const { renderer, flatScreen } = this.player;
 		renderer.setAnimationLoop(null);
 		this.listeners?.abort();
 		this.resizeObserver?.disconnect();
 		renderer.domElement.style.display = 'none';
-		screen.visible = false;
+		flatScreen.visible = false;
 		this.drag = null;
 	}
 

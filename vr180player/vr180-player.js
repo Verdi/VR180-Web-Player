@@ -17,6 +17,7 @@ window.VR180Player = VR180Player;
 function optionsFromAttributes(video) {
 	const { projection, stereo, skipSeconds, hls, hlsQuality, debug } = video.dataset;
 	const options = {};
+	if (video.dataset['2dSrc']) options.src2d = video.dataset['2dSrc']; // data-2d-src
 	if (debug !== undefined) options.debug = true;
 	if (hls) options.hls = hls;
 	if (hlsQuality) options.hlsQuality = hlsQuality;

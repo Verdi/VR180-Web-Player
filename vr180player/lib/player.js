@@ -15,6 +15,9 @@ const DEFAULT_OPTIONS = {
 	skipSeconds: 15,
 	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
 	hlsQuality: 'auto', // The first HLS quality: 'auto', 'best' (the highest), or a height such as '2880'.
+	// A video for 2D (not VR), with only the left-eye picture: an HLS playlist or a file.
+	// In 2D, the player plays it instead of the <video> source. VR always plays the <video> source.
+	src2d: '',
 	debug: false, // Shows the video size and source type in the panel title.
 	title: '',
 };
@@ -30,7 +33,8 @@ export class VR180Player {
 
 		this.video = video;
 		this.options = { ...DEFAULT_OPTIONS, ...options };
-		this.format = resolveFormat(this.options);
+		this.format = resolveFormat(this.options); // For VR, and for 2D without src2d.
+		this.flatFormat = this.options.src2d ? resolveFormat({ ...this.options, stereo: 'mono' }) : this.format;
 		this.title = this.options.title || video.title || titleFromSource(video) || 'Video';
 		this.container = findOrCreateContainer(video);
 		this.listeners = new AbortController();
@@ -55,12 +59,11 @@ export class VR180Player {
 		});
 		this.#listenToVideo();
 		video.vr180Player = this;
-		this.#createSource();
-
-		isXRSupported().then((supported) => {
+		this.xrReady = isXRSupported().then((supported) => {
 			this.xrSupported = supported;
 			this.#updatePlayButton();
 		});
+		this.#createSource();
 	}
 
 	play() {
@@ -183,10 +186,16 @@ export class VR180Player {
 		this.video.style.display = '';
 	}
 
-	// The panel title in debug mode, for example "HLS player · 3840×1920 · native-hls (best, data) · 2x".
+	// True when the player plays the 2D video (src2d): on a device without VR.
+	get uses2dSource() {
+		return Boolean(this.options.src2d) && this.xrSupported === false;
+	}
+
+	// The panel title in debug mode, for example "HLS player · 3840×1920 · native-hls · 2x".
 	debugTitle() {
 		const { video } = this;
 		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
+		if (this.uses2dSource) parts.push('2D source');
 		return parts.join(' · ');
 	}
 
@@ -211,6 +220,7 @@ export class VR180Player {
 			this.renderer.setAnimationLoop(null);
 			this.texture.dispose();
 			disposeVideoScreen(this.screen);
+			if (this.flatScreen !== this.screen) disposeVideoScreen(this.flatScreen);
 			this.vrPanel.dispose();
 			this.renderer.dispose();
 			this.renderer.domElement.remove();
@@ -252,8 +262,11 @@ export class VR180Player {
 		this.texture = this.#createTexture();
 
 		this.scene = new THREE.Scene();
+		// One screen for VR, and one for 2D if the 2D video has a different format.
 		this.screen = createVideoScreen(this.format, this.texture);
 		this.scene.add(this.screen);
+		this.flatScreen = this.flatFormat === this.format ? this.screen : createVideoScreen(this.flatFormat, this.texture);
+		if (this.flatScreen !== this.screen) this.scene.add(this.flatScreen);
 		this.vrPanel = new VRPanel(this.title);
 		this.scene.add(this.vrPanel.group);
 
@@ -308,7 +321,12 @@ export class VR180Player {
 		const { video } = this;
 		this.source = null;
 		this.sourceError = null;
-		createSource(video, this.options.hls, { quality: this.quality })
+		// The source depends on the mode: devices with VR play the <video> source, others play src2d.
+		this.xrReady
+			.then(() => createSource(video, this.options.hls, {
+				quality: this.quality,
+				url: this.uses2dSource ? this.options.src2d : null,
+			}))
 			.then((source) => {
 				if (video !== this.video) return source.destroy(); // The video was replaced.
 				this.source = source;
@@ -357,9 +375,11 @@ export class VR180Player {
 		if (this.texture) {
 			this.texture.dispose();
 			this.texture = this.#createTexture();
-			this.screen.traverse((object) => {
-				if (object.isMesh) object.material.map = this.texture;
-			});
+			for (const screen of new Set([this.screen, this.flatScreen])) {
+				screen.traverse((object) => {
+					if (object.isMesh) object.material.map = this.texture;
+				});
+			}
 		}
 		this.syncUI();
 	}

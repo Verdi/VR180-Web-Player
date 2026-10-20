@@ -42,6 +42,18 @@ Use your HLS stream (`.m3u8`) as the video source:
   - To start with a fixed quality, add `data-hls-quality="best"` (the highest) or a height, such as `data-hls-quality="2880"`.
 - To see which quality plays, add `data-debug`. The control panel title then shows the video size and how the stream plays.
 
+### A smaller video for 2D
+In 2D, the player shows only the left-eye picture, so 2D viewers download the right half of each frame for nothing. You can give the player a second video for 2D, with only the left-eye picture:
+```
+<video data-vr180 data-2d-src="https://example.com/my-video/2d/master.m3u8" preload="none" poster="poster.jpg" title="My Video" crossOrigin="anonymous" playsinline>
+	<source src="https://example.com/my-video/vr/master.m3u8" type="application/vnd.apple.mpegurl">
+</video>
+```
+- Headsets always play the `<source>` (side by side). Other devices play `data-2d-src`.
+- The 2D video is the left half of the side-by-side frame, so it is square, for example 2048×2048. It can be an HLS playlist or a file.
+- Use H.264 for the 2D video, so every browser can play it (Firefox cannot play HEVC). Headsets play HEVC, so the VR video can stay HEVC.
+- `tools/make-test-hls-2d.sh` shows how to make one with ffmpeg.
+
 ### Starting a player from JavaScript
 ```
 import { VR180Player } from 'https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.1.0/vr180player/vr180-player.js';
@@ -58,7 +70,7 @@ player.destroy();
 | `player.js` | One player for one video. Starts VR or 2D mode and runs the control actions. |
 | `source.js` | Where the video comes from: a normal file, or an HLS stream (with hls.js or the browser's own HLS). |
 | `hls-playlist.js` | Makes an HLS playlist with only the highest quality, for the browser's own HLS. |
-| `formats.js` | Video formats: the shape the video is drawn on, and where each eye's picture is in the frame. |
+| `formats.js` | Video formats: the shape the video is drawn on, and where each eye's picture is in the frame (side by side, or mono for a 2D video). |
 | `video-screen.js` | Makes the 3D surface for the video. Each eye gets its own copy. |
 | `xr-mode.js` | VR mode on a headset. |
 | `vr-panel.js` | The control panel you see in VR. |
@@ -69,7 +81,7 @@ player.destroy();
 
 To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`.
 
-`dev.html` also plays a 60-second HLS test stream with 3 qualities (8K, 6K, and 4K), in `test-media/hls/`. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
+`dev.html` also plays a 60-second HLS test stream with 3 qualities (8K, 6K, and 4K), in `test-media/hls/`, and in 2D a left-eye stream (2K and 1K, H.264), in `test-media/hls-2d/`. `tools/make-test-hls-2d.sh` makes the 2D stream. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
 
 ## How it works
 When the webpage loads, the video file is embeded normally, with a play button positioned over the poster frame. When the user clicks play, the player script checks if `navigator.xr` exists. If it does, a VR experience is initiated. If not, it builds a rectilinear, 2D view of your video and plays it that way. 

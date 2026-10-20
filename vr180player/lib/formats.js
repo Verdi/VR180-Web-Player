@@ -25,6 +25,8 @@ export const PROJECTIONS = {
 // A layout with no `right` entry is mono: both eyes see `left`.
 export const LAYOUTS = {
 	sbs: { left: [0, 0, 0.5, 1], right: [0.5, 0, 0.5, 1] },
+	// One picture for both eyes. For example, a 2D playlist with only the left-eye picture.
+	mono: { left: [0, 0, 1, 1] },
 };
 
 export function resolveFormat({ projection = '180', stereo = 'sbs' } = {}) {
