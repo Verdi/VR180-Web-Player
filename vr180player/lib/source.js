@@ -265,6 +265,13 @@ class HlsJsSource {
 		this.hls.stopLoad();
 	}
 
+	// Loads again from `time`. The stall guard uses it when the video is stuck with nothing loaded.
+	restartLoad(time) {
+		this.hls.stopLoad();
+		this.hls.startLoad(time);
+		this.loadStarted = true;
+	}
+
 	destroy() {
 		this.hls.destroy();
 	}

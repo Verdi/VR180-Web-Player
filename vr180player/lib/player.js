@@ -6,6 +6,7 @@ import { DomControls } from './dom-controls.js';
 import { FlatMode } from './flat-mode.js';
 import { XRMode, isXRSupported } from './xr-mode.js';
 import { createSource } from './source.js';
+import { StallGuard, bufferedAhead } from './stall-guard.js';
 
 const PLAY_ICON_URL = new URL('../images/play.png', import.meta.url).href;
 
@@ -52,6 +53,7 @@ export class VR180Player {
 		this.sourceError = null;
 		this.quality = String(this.options.hlsQuality); // The viewer's choice. See setQuality().
 		this.sizeChanges = 0; // How often the video size changed, for data-debug.
+		this.stallGuard = new StallGuard(this);
 
 		this.poster = this.#createPoster();
 		this.playButton = this.#createPlayButton();
@@ -160,6 +162,7 @@ export class VR180Player {
 
 	// Goes back to the start state: poster frame and play button.
 	reset() {
+		this.stallGuard.stop();
 		if (this.mode === this.flatMode) this.flatMode.stop();
 		this.mode = null;
 		this.controls.hide();
@@ -202,7 +205,7 @@ export class VR180Player {
 	}
 
 	// One line for the VR debug label, for example
-	// "4096×2048 · hls.js · 4K · media layer · dropped 3 · size changes 2".
+	// "4096×2048 · hls.js · 4K · media layer · ahead 12.0 s · ready 4 · dropped 3 · stall fixes 0 · size changes 2".
 	// `layer` is how VR shows the video: 'media layer' or 'WebGL'.
 	debugStatus(layer) {
 		const { video } = this;
@@ -212,7 +215,10 @@ export class VR180Player {
 			this.source?.kind ?? '?',
 			this.qualityLabel() ?? '',
 			layer,
+			`ahead ${bufferedAhead(video).toFixed(1)} s`,
+			`ready ${video.readyState}`,
 			quality ? `dropped ${quality.droppedVideoFrames}` : '',
+			`stall fixes ${this.stallGuard.fixes}`,
 			`size changes ${this.sizeChanges}`,
 		].filter(Boolean).join(' · ');
 	}
@@ -259,6 +265,7 @@ export class VR180Player {
 			this.mode = this.flatMode;
 			this.flatMode.start();
 		}
+		if (this.mode) this.stallGuard.start();
 	}
 
 	#createScene() {
