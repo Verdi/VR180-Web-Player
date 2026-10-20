@@ -1,21 +1,20 @@
 #!/bin/sh
-# Makes a 20-second HLS test stream with 5 qualities, in test-media/hls/. dev.html plays it.
+# Makes a 60-second HLS test stream with 3 qualities (8K, 6K, 4K), in test-media/hls/. dev.html plays it.
+# 4K is the lowest: lower qualities look too bad in a headset.
 # Usage: tools/make-test-hls.sh path/to/source-video.mp4
 # The source should be 8192x4096 side-by-side video. Run this from the repository folder.
 # It needs ffmpeg with VideoToolbox (on a Mac).
 set -e
 SOURCE=${1:?Give the source video, for example: tools/make-test-hls.sh /path/to/video.mp4}
 OUT=test-media/hls
-LENGTH=20
+LENGTH=60
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
 # name width height video-bitrate
 LADDER="8k 8192 4096 24M
 6k 5760 2880 14M
-4k 3840 1920 8M
-2k5 2560 1280 4M
-2k 1920 960 2M"
+4k 3840 1920 8M"
 
 echo "$LADDER" | while read -r name width height bitrate; do
 	echo "Encoding $name ($width x $height, $bitrate)"
