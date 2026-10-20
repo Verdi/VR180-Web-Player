@@ -17,6 +17,7 @@ const DEFAULT_OPTIONS = {
 	// Test options:
 	debug: false, // Shows the video size and source type in the VR panel title.
 	bigHiddenVideo: false, // While playing, keeps the <video> large but invisible, not hidden.
+	lockHlsQuality: false, // Gives Safari's own HLS a playlist with only the highest quality.
 	title: '',
 };
 
@@ -52,7 +53,7 @@ export class VR180Player {
 		this.#listenToVideo();
 		video.vr180Player = this;
 
-		createSource(video, this.options.hls)
+		createSource(video, this.options.hls, { lockBestQuality: this.options.lockHlsQuality })
 			.then((source) => {
 				this.source = source;
 				source.onFatalError = (err) => {
@@ -174,6 +175,7 @@ export class VR180Player {
 		const { video } = this;
 		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
 		if (this.options.bigHiddenVideo) parts.push('big');
+		if (this.options.lockHlsQuality) parts.push('lock');
 		return parts.join(' · ');
 	}
 
@@ -291,6 +293,8 @@ export class VR180Player {
 			video.addEventListener(type, syncUI, options);
 		}
 		video.addEventListener('play', () => this.source?.startLoad(), options);
+		// A new source clears an old error, so the play button can work again.
+		video.addEventListener('emptied', () => this.#updatePlayButton(), options);
 		video.addEventListener('ended', () => this.#onEnded(), options);
 		video.addEventListener('error', () => {
 			// The error can be from an old source that is already replaced (for example, by hls.js).

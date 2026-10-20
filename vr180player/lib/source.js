@@ -7,6 +7,8 @@
 //   The player uses it in all other browsers, such as Chrome and the Quest browser.
 // hls.js is loaded from the CDN only when the player uses it.
 
+import { bestQualityPlaylistUrls } from './hls-playlist.js';
+
 // hls.js is locked to one version, so a new hls.js release cannot break the player.
 const HLS_JS_URL = 'https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.mjs';
 const HLS_TYPES = ['application/vnd.apple.mpegurl', 'application/x-mpegurl', 'audio/mpegurl'];
@@ -42,11 +44,23 @@ function hasMediaSource() {
 // - 'auto': native HLS in Safari, hls.js in other browsers.
 // - 'native': native HLS first.
 // - 'hls.js': hls.js first.
-export async function createSource(video, hlsMode = 'auto') {
+// `lockBestQuality` (a test option) gives native HLS a playlist with only the highest quality.
+export async function createSource(video, hlsMode = 'auto', { lockBestQuality = false } = {}) {
 	const url = findHlsUrl(video);
 	if (!url) return new FileSource(video);
 
-	const tryNative = () => (video.canPlayType('application/vnd.apple.mpegurl') ? new NativeHlsSource(video, url) : null);
+	const tryNative = async () => {
+		if (!video.canPlayType('application/vnd.apple.mpegurl')) return null;
+		let lockedUrls = [];
+		if (lockBestQuality) {
+			try {
+				lockedUrls = await bestQualityPlaylistUrls(url);
+			} catch (err) {
+				console.warn('VR180Player: could not lock the HLS quality, so the browser chooses it:', err);
+			}
+		}
+		return new NativeHlsSource(video, url, lockedUrls);
+	};
 	const tryHlsJs = async () => {
 		if (!hasMediaSource()) return null;
 		try {
@@ -60,8 +74,8 @@ export async function createSource(video, hlsMode = 'auto') {
 
 	const nativeFirst = hlsMode === 'native' || (hlsMode !== 'hls.js' && isAppleBrowser());
 	const source = nativeFirst
-		? tryNative() ?? (await tryHlsJs())
-		: (await tryHlsJs()) ?? tryNative();
+		? (await tryNative()) ?? (await tryHlsJs())
+		: (await tryHlsJs()) ?? (await tryNative());
 	if (!source) throw new Error('This browser cannot play HLS streams.');
 	return source;
 }
@@ -88,12 +102,40 @@ class FileSource {
 }
 
 // HLS played by the browser itself (Safari).
+// With `lockedUrls`, it tries each rewritten playlist in turn. If the browser refuses one,
+// it tries the next one, and at the end the original playlist.
 class NativeHlsSource extends FileSource {
-	constructor(video, url) {
+	constructor(video, url, lockedUrls = []) {
 		super(video);
-		this.kind = 'native-hls';
-		if (video.getAttribute('src') !== url) {
-			video.src = url;
+		this.tries = [...lockedUrls, { how: null, url }];
+		this.onError = () => this.#tryNext();
+		if (lockedUrls.length) video.addEventListener('error', this.onError);
+		this.#tryNext(true);
+	}
+
+	startLoad() {
+		this.playRequested = true;
+	}
+
+	stopLoad() {
+		this.playRequested = false;
+	}
+
+	destroy() {
+		this.video.removeEventListener('error', this.onError);
+	}
+
+	#tryNext(first = false) {
+		const next = this.tries.shift();
+		if (!next) return;
+		if (!first) console.warn('VR180Player: the browser refused the playlist. Trying the next one.');
+		if (!next.how) this.video.removeEventListener('error', this.onError);
+		this.kind = next.how ? `native-hls (locked, ${next.how})`
+			: first ? 'native-hls' : 'native-hls (lock failed)';
+		if (this.video.getAttribute('src') !== next.url) this.video.src = next.url;
+		// The refused playlist also stopped playback. Start it again with the next playlist.
+		if (!first && this.playRequested) {
+			this.video.play().catch((err) => console.error('VR180Player: could not play video:', err));
 		}
 	}
 }

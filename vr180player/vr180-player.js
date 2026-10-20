@@ -15,10 +15,11 @@ window.VR180Player = VR180Player;
 
 // Reads player options from data attributes, for example <video data-vr180 data-skip-seconds="10">.
 function optionsFromAttributes(video) {
-	const { projection, stereo, skipSeconds, hls, debug, bigHiddenVideo } = video.dataset;
+	const { projection, stereo, skipSeconds, hls, debug, bigHiddenVideo, lockHlsQuality } = video.dataset;
 	const options = {};
 	if (debug !== undefined) options.debug = true;
 	if (bigHiddenVideo !== undefined) options.bigHiddenVideo = true;
+	if (lockHlsQuality !== undefined) options.lockHlsQuality = true;
 	if (hls) options.hls = hls;
 	if (projection) options.projection = projection;
 	if (stereo) options.stereo = stereo;

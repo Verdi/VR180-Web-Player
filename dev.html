@@ -25,7 +25,7 @@
 			<source src="sbs-video.mp4" type="video/mp4">
 		</video>
 		<p>HLS player. It plays <code>test-media/hls/master.m3u8</code>. To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>?mode=hls.js</code> or <code>?mode=native</code> to choose how HLS plays. Without it, Safari uses its own HLS, and other browsers use hls.js.</p>
-		<p>Test options: <code>?debug</code> shows the video size in the VR panel title. <code>?big</code> keeps the hidden video element large while it plays. Join options with <code>&amp;</code>, for example <code>?debug&amp;big</code>.</p>
+		<p>Test options: <code>?debug</code> shows the video size in the VR panel title. <code>?big</code> keeps the hidden video element large while it plays. <code>?lock</code> gives Safari's own HLS only the highest quality. Join options with <code>&amp;</code>, for example <code>?debug&amp;big</code>.</p>
 		<video id="hls-test" data-vr180 title="HLS player" preload="none" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
 		</video>
@@ -39,6 +39,7 @@
 			for (const video of document.querySelectorAll('video')) {
 				if (params.has('debug')) video.dataset.debug = '';
 				if (params.has('big')) video.dataset.bigHiddenVideo = '';
+				if (params.has('lock')) video.dataset.lockHlsQuality = '';
 			}
 		</script>
 	</main>
