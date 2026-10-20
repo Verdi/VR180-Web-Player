@@ -1,5 +1,5 @@
 import * as THREE from './three.js';
-import { ICONS, drawIcon } from './icons.js';
+import { ICONS, drawIcon, textIcon } from './icons.js';
 
 // Sizes from the Figma design, in design pixels (origin top-left, y down).
 const DESIGN = {
@@ -26,12 +26,15 @@ const FADE_MS = 200;
 const AUTO_HIDE_MS = 10000;
 
 // The panel buttons. `x` is the button center in the design.
-// `icon` picks the icon to show from the current video state.
+// `icon` picks the icon to show from the current video state and the panel state.
+// A button whose icon is null is hidden.
 const BUTTONS = [
 	{ action: 'exit', x: 42, icon: () => ICONS.exit },
 	{ action: 'back', x: 169, icon: () => ICONS.back },
 	{ action: 'playPause', x: 225, icon: (video) => (video.paused || video.ended ? ICONS.play : ICONS.pause) },
 	{ action: 'forward', x: 281, icon: () => ICONS.forward },
+	// Between the forward and mute buttons. Shown only when the video has qualities to choose.
+	{ action: 'quality', x: 345, icon: (_video, state) => (state.qualityLabel ? textIcon(state.qualityLabel) : null) },
 	{ action: 'mute', x: 408, icon: (video) => (video.muted || video.volume === 0 ? ICONS.soundOff : ICONS.soundOn) },
 ];
 
@@ -53,8 +56,9 @@ export class VRPanel {
 		this.group = new THREE.Group();
 		this.group.name = 'vrControlPanel';
 		this.group.position.set(...PANEL_POSITION);
-		this.interactables = [];
+		this.allInteractables = [];
 		this.buttons = [];
+		this.state = { qualityLabel: null };
 		this.opacity = 0;
 		this.targetOpacity = 0;
 		this.hideTimer = null;
@@ -63,6 +67,16 @@ export class VRPanel {
 		this.#addSeekBar();
 		for (const spec of BUTTONS) this.#addButton(spec);
 		this.reset();
+	}
+
+	// The meshes a controller can press. Hidden buttons are not in the list.
+	get interactables() {
+		return this.allInteractables.filter((mesh) => mesh.visible);
+	}
+
+	// Shows the quality choice on the quality button, or hides the button if `label` is null.
+	setQualityLabel(label) {
+		this.state.qualityLabel = label;
 	}
 
 	get isShown() {
@@ -107,8 +121,9 @@ export class VRPanel {
 		this.seekProgress.position.x = -SEEK_WIDTH / 2 + (SEEK_WIDTH * progress) / 2;
 
 		for (const button of this.buttons) {
-			const icon = button.spec.icon(video);
-			if (icon === button.icon) continue;
+			const icon = button.spec.icon(video, this.state);
+			button.mesh.visible = Boolean(icon);
+			if (!icon || icon === button.icon) continue;
 			button.icon = icon;
 			drawIcon(button.context, BUTTON_TEXTURE_SIZE, icon);
 			button.texture.needsUpdate = true;
@@ -144,18 +159,18 @@ export class VRPanel {
 		if (action) {
 			mesh.name = action;
 			mesh.userData.action = action;
-			this.interactables.push(mesh);
+			this.allInteractables.push(mesh);
 		}
 		this.group.add(mesh);
 		return mesh;
 	}
 
-	#addBackground(title) {
-		const canvas = document.createElement('canvas');
-		canvas.width = TEXTURE_WIDTH;
-		canvas.height = Math.round(DESIGN.height * TEXTURE_SCALE);
-		const ctx = canvas.getContext('2d');
-
+	// Changes the title on the panel.
+	setTitle(title) {
+		if (title === this.title) return;
+		this.title = title;
+		const { canvas, ctx, texture } = this.background;
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
 		ctx.beginPath();
 		ctx.roundRect(0, 0, canvas.width, canvas.height, DESIGN.cornerRadius * TEXTURE_SCALE);
@@ -166,9 +181,17 @@ export class VRPanel {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'top';
 		ctx.fillText(title, canvas.width / 2, DESIGN.titleTop * TEXTURE_SCALE);
+		texture.needsUpdate = true;
+	}
 
+	#addBackground(title) {
+		const canvas = document.createElement('canvas');
+		canvas.width = TEXTURE_WIDTH;
+		canvas.height = Math.round(DESIGN.height * TEXTURE_SCALE);
 		const texture = new THREE.CanvasTexture(canvas);
 		texture.minFilter = THREE.LinearFilter;
+		this.background = { canvas, ctx: canvas.getContext('2d'), texture };
+		this.setTitle(title);
 		this.#addMesh(PANEL_WIDTH_METERS, DESIGN.height * METERS_PER_PIXEL, fadeMaterial({ map: texture }), {
 			action: 'background',
 		});
@@ -199,7 +222,7 @@ export class VRPanel {
 
 		const [x, y] = toPanel(spec.x, DESIGN.buttonY);
 		const size = DESIGN.buttonSize * METERS_PER_PIXEL;
-		this.#addMesh(size, size, fadeMaterial({ map: texture }), { x, y, z: 0.02, renderOrder: 3, action: spec.action });
-		this.buttons.push({ spec, texture, context: canvas.getContext('2d'), icon: null });
+		const mesh = this.#addMesh(size, size, fadeMaterial({ map: texture }), { x, y, z: 0.02, renderOrder: 3, action: spec.action });
+		this.buttons.push({ spec, mesh, texture, context: canvas.getContext('2d'), icon: null });
 	}
 }

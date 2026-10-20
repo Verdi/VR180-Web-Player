@@ -27,8 +27,8 @@ export class DomControls {
 		this.hideTimer = null;
 		this.root = element('div', 'vr180-panel');
 
-		const titleEl = element('p', 'vr180-title');
-		titleEl.textContent = title;
+		this.titleEl = element('p', 'vr180-title');
+		this.titleEl.textContent = title;
 		this.currentTime = element('p', 'vr180-time vr180-current-time');
 		this.totalTime = element('p', 'vr180-time vr180-total-time');
 		this.bar = element('div', 'vr180-bar');
@@ -37,14 +37,25 @@ export class DomControls {
 		const progress = element('div', 'vr180-progress');
 		progress.append(this.currentTime, this.bar, this.totalTime);
 		const status = element('div', 'vr180-status');
-		status.append(titleEl, progress);
+		status.append(this.titleEl, progress);
 
 		this.playPause = button('vr180-play-pause', 'playPause', 'Play');
 		this.mute = button('vr180-mute', 'mute', 'Mute');
 		const nav = element('div', 'vr180-nav');
 		nav.append(button('vr180-back', 'back', 'Skip back'), this.playPause, button('vr180-forward', 'forward', 'Skip forward'));
+		// The quality menu. It is hidden until the video has qualities to choose.
+		this.quality = element('select', 'vr180-quality', { 'aria-label': 'Quality', hidden: '' });
+		this.qualityKey = '';
+		this.quality.addEventListener('change', () => {
+			onAction('quality', this.quality.value);
+			this.show();
+		});
+		// Keep the panel shown while the viewer uses the menu.
+		this.quality.addEventListener('pointerdown', () => this.pin());
+		this.quality.addEventListener('focus', () => this.pin());
+
 		const controls = element('div', 'vr180-controls');
-		controls.append(button('vr180-fullscreen', 'fullscreen', 'Full screen'), nav, this.mute);
+		controls.append(button('vr180-fullscreen', 'fullscreen', 'Full screen'), nav, this.quality, this.mute);
 
 		this.root.append(status, controls);
 		container.append(this.root);
@@ -78,6 +89,26 @@ export class DomControls {
 	hide() {
 		clearTimeout(this.hideTimer);
 		this.root.classList.remove('visible');
+	}
+
+	// Fills the quality menu. `qualities` is [{ id, label }]; `current` is 'auto' or an id.
+	setQualities(qualities, current) {
+		const key = qualities.map((q) => `${q.id}:${q.label}`).join(',');
+		if (key !== this.qualityKey) {
+			this.qualityKey = key;
+			this.quality.replaceChildren(...[{ id: 'auto', label: 'Auto' }, ...qualities].map(({ id, label }) => {
+				const option = document.createElement('option');
+				option.value = id;
+				option.textContent = label;
+				return option;
+			}));
+		}
+		this.quality.hidden = qualities.length === 0;
+		if (this.quality.value !== current) this.quality.value = current;
+	}
+
+	setTitle(title) {
+		this.titleEl.textContent = title;
 	}
 
 	update(video) {

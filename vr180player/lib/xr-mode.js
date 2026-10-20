@@ -38,7 +38,7 @@ export class XRMode {
 			this.session = session;
 			session.addEventListener('end', this.onSessionEnd);
 
-			video.style.display = 'none';
+			player.hideVideo();
 			if (video.paused || video.ended) {
 				await video.play().catch((err) => console.error('VR180Player: could not play video in VR:', err));
 			}
@@ -90,6 +90,7 @@ export class XRMode {
 		const deltaMs = this.lastFrameTime ? time - this.lastFrameTime : 0;
 		this.lastFrameTime = time;
 		player.vrPanel.tick(deltaMs);
+		if (player.options.debug) player.vrPanel.setTitle(player.debugTitle());
 
 		// Quest browsers can skip video frames in VR unless the texture is updated every frame.
 		if (!video.paused && !video.ended) player.texture.needsUpdate = true;

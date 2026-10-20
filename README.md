@@ -24,6 +24,24 @@ Add `data-vr180` to each video. You do not need the `vr-container` div.
 ```
 Options go in data attributes. For example, `data-skip-seconds="10"` changes how far the back and forward buttons skip (the default is 15).
 
+### HLS streaming
+Use your HLS stream (`.m3u8`) as the video source:
+```
+<video data-vr180 preload="none" poster="poster.jpg" title="My Video" crossOrigin="anonymous" playsinline>
+	<source src="https://example.com/my-video/master.m3u8" type="application/vnd.apple.mpegurl">
+</video>
+```
+- Add `preload="none"`. Without it, some browsers start to download the stream before the player is ready. (In Safari, the player always waits for play before it loads the stream, because Safari chooses a low quality if the stream loads while the video is small on the page.)
+- Your video server must allow cross-origin requests (CORS) for the playlists and the video files. Without CORS, the browser cannot draw the video in 3D.
+- In Safari (Mac, Vision Pro, iPhone), the browser plays the stream itself. Other browsers, such as Chrome and the Quest browser, use [hls.js](https://github.com/video-dev/hls.js). The player loads hls.js only when it needs it.
+- To choose, add `data-hls="native"` (the browser's own HLS) or `data-hls="hls.js"`. If that way cannot work in the browser, the player uses the other one.
+- Quality:
+  - **Auto** is the default. With hls.js, the player starts at the highest quality and goes down only if the connection is too slow. With the browser's own HLS, the browser chooses. (The player uses a new `<video>` element for each play, because on Vision Pro, Safari chose a low quality when the same element played a second time.)
+  - **The viewer can choose a quality.** The VR panel has a quality button between "forward" and "mute": each tap goes to the next quality. The 2D controls have a quality menu. The list comes from the qualities in your HLS playlist, so there is nothing to set up. MP4 videos have no quality choice.
+  - With the browser's own HLS, a fixed quality works like in [OpenImmersive](https://github.com/acuteimmersive/openimmersive): the player gives the browser a playlist with only that quality. A change takes a moment, because the video loads again at the same time. The player keeps the same `<video>` element for this, because Safari lets a new element play with sound only after the viewer presses play.
+  - To start with a fixed quality, add `data-hls-quality="best"` (the highest) or a height, such as `data-hls-quality="2880"`.
+- To see which quality plays, add `data-debug`. The control panel title then shows the video size and how the stream plays.
+
 ### Starting a player from JavaScript
 ```
 import { VR180Player } from 'https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.0.4/vr180player/vr180-player.js';
@@ -38,6 +56,8 @@ player.destroy();
 | File | What it does |
 | --- | --- |
 | `player.js` | One player for one video. Starts VR or 2D mode and runs the control actions. |
+| `source.js` | Where the video comes from: a normal file, or an HLS stream (with hls.js or the browser's own HLS). |
+| `hls-playlist.js` | Makes an HLS playlist with only the highest quality, for the browser's own HLS. |
 | `formats.js` | Video formats: the shape the video is drawn on, and where each eye's picture is in the frame. |
 | `video-screen.js` | Makes the 3D surface for the video. Each eye gets its own copy. |
 | `xr-mode.js` | VR mode on a headset. |
@@ -48,6 +68,8 @@ player.destroy();
 | `three.js` | Loads Three.js, locked to one version. |
 
 To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`.
+
+`dev.html` also plays a 60-second HLS test stream with 3 qualities (8K, 6K, and 4K), in `test-media/hls/`. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
 
 ## How it works
 When the webpage loads, the video file is embeded normally, with a play button positioned over the poster frame. When the user clicks play, the player script checks if `navigator.xr` exists. If it does, a VR experience is initiated. If not, it builds a rectilinear, 2D view of your video and plays it that way. 
@@ -61,7 +83,7 @@ You can drag the 2D video around to see things outside the frame.
 <img width="1000" height="793" alt="2d" src="https://github.com/user-attachments/assets/094d30b7-7175-44ba-a700-d333196f8bb3" />
 
 ## Video Format
-**The player only supports 2:1, side-by-side video using either H.264 or HEVC in an mp4 file.** It does not support over-under, MV-HEVC, APMP, or .aivu.
+**The player only supports 2:1, side-by-side video using either H.264 or HEVC, in an mp4 file or an HLS stream.** It does not support over-under, MV-HEVC, APMP, or .aivu.
 
 ## Support
 I'm not a developer and I might not be able to help you if you run into problems, want to customize this, or add new features (not that I won't try). I'm releasing this with the [unlicense](https://unlicense.org/) so you're free to do anything at all with it. That said, if you have ideas or want to contribute code, I'd love to [hear](mailto:hello@michaelverdi.com) from you.

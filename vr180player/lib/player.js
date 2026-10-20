@@ -5,6 +5,7 @@ import { VRPanel } from './vr-panel.js';
 import { DomControls } from './dom-controls.js';
 import { FlatMode } from './flat-mode.js';
 import { XRMode, isXRSupported } from './xr-mode.js';
+import { createSource } from './source.js';
 
 const PLAY_ICON_URL = new URL('../images/play.png', import.meta.url).href;
 
@@ -12,6 +13,9 @@ const DEFAULT_OPTIONS = {
 	projection: '180',
 	stereo: 'sbs',
 	skipSeconds: 15,
+	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
+	hlsQuality: 'auto', // The first HLS quality: 'auto', 'best' (the highest), or a height such as '2880'.
+	debug: false, // Shows the video size and source type in the panel title.
 	title: '',
 };
 
@@ -30,12 +34,20 @@ export class VR180Player {
 		this.title = this.options.title || video.title || titleFromSource(video) || 'Video';
 		this.container = findOrCreateContainer(video);
 		this.listeners = new AbortController();
+		this.videoListeners = null; // Listeners on the current <video>. See #listenToVideo().
+		// Before a source changes them. A new <video> gets these again (see #replaceVideo()).
+		this.originalSrc = video.getAttribute('src');
+		this.originalPreload = video.getAttribute('preload');
 		this.mode = null; // The FlatMode or XRMode showing the video, or null when the poster shows.
 		this.xrSupported = null; // null until the browser answers.
 		// Three.js objects are made on the first play, so a page with many players
 		// does not use a WebGL context for each one.
 		this.renderer = null;
+		this.source = null; // Set when the video source is ready. See source.js.
+		this.sourceError = null;
+		this.quality = String(this.options.hlsQuality); // The viewer's choice. See setQuality().
 
+		this.poster = this.#createPoster();
 		this.playButton = this.#createPlayButton();
 		this.controls = new DomControls(this.container, {
 			title: this.title,
@@ -43,6 +55,7 @@ export class VR180Player {
 		});
 		this.#listenToVideo();
 		video.vr180Player = this;
+		this.#createSource();
 
 		isXRSupported().then((supported) => {
 			this.xrSupported = supported;
@@ -89,6 +102,32 @@ export class VR180Player {
 		request?.catch((err) => console.error('VR180Player: full screen failed:', err));
 	}
 
+	// The qualities the viewer can choose, highest first, as [{ id, label }]. Empty if there is no choice.
+	get qualities() {
+		return this.source?.qualities ?? [];
+	}
+
+	// Changes the HLS quality: 'auto', or an id from `qualities`. The video keeps its place.
+	setQuality(id) {
+		if (!this.source || id === this.source.quality) return;
+		if (this.source.setQuality(id)) this.quality = id;
+		this.syncUI();
+	}
+
+	// Goes to the next quality: Auto, then each quality from highest to lowest, then Auto again.
+	nextQuality() {
+		const ids = ['auto', ...this.qualities.map((q) => q.id)];
+		const current = ids.indexOf(this.source?.quality ?? 'auto');
+		this.setQuality(ids[(current + 1) % ids.length]);
+	}
+
+	// A short name for the current quality choice, or null if there is no choice.
+	qualityLabel() {
+		if (!this.qualities.length) return null;
+		const quality = this.source.quality;
+		return this.qualities.find((q) => q.id === quality)?.label ?? 'Auto';
+	}
+
 	// Runs a control action. The 2D controls and the VR panel both use this.
 	runAction(action, value) {
 		const skipSeconds = this.options.skipSeconds;
@@ -100,6 +139,7 @@ export class VR180Player {
 			case 'seek': this.seekToFraction(value); break;
 			case 'fullscreen': this.toggleFullscreen(); break;
 			case 'exit': this.stop(); break;
+			case 'quality': value === undefined ? this.nextQuality() : this.setQuality(value); break;
 			default: console.warn(`VR180Player: unknown action "${action}".`);
 		}
 	}
@@ -123,15 +163,38 @@ export class VR180Player {
 		video.pause();
 		video.currentTime = 0;
 		video.controls = false;
-		video.style.display = '';
-		video.load(); // Shows the poster frame again.
+		this.showVideo();
+		// Show the poster image again. The player does not reload the video for this, so the
+		// stream stays loaded. (After a reload, Safari on Vision Pro restarted HLS in low quality.)
+		this.poster?.classList.remove('hidden');
+		this.source?.stopLoad();
 
+		if (this.source?.needsNewVideoEachPlay) this.#replaceVideo();
 		this.playButton.classList.remove('hidden');
 		this.#updatePlayButton();
 	}
 
+	// While the video plays in VR or 2D, the <video> element is not shown. The canvas or headset shows it.
+	hideVideo() {
+		this.video.style.display = 'none';
+	}
+
+	showVideo() {
+		this.video.style.display = '';
+	}
+
+	// The panel title in debug mode, for example "HLS player · 3840×1920 · native-hls (best, data) · 2x".
+	debugTitle() {
+		const { video } = this;
+		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
+		return parts.join(' · ');
+	}
+
 	syncUI() {
+		this.controls.setQualities(this.qualities, this.source?.quality ?? 'auto');
+		this.vrPanel?.setQualityLabel(this.qualityLabel());
 		this.controls.update(this.video);
+		if (this.options.debug) this.controls.setTitle(this.debugTitle());
 		this.vrPanel?.update(this.video);
 	}
 
@@ -139,8 +202,11 @@ export class VR180Player {
 	destroy() {
 		if (this.mode) this.stop();
 		this.listeners.abort();
+		this.videoListeners.abort();
 		this.controls.destroy();
 		this.playButton.remove();
+		this.poster?.remove();
+		this.source?.destroy();
 		if (this.renderer) {
 			this.renderer.setAnimationLoop(null);
 			this.texture.dispose();
@@ -155,6 +221,7 @@ export class VR180Player {
 
 	async #start() {
 		this.playButton.classList.add('hidden');
+		this.poster?.classList.add('hidden');
 		this.#createScene();
 		if (this.xrSupported) {
 			this.mode = this.xrMode;
@@ -182,10 +249,7 @@ export class VR180Player {
 		this.video.after(renderer.domElement);
 		this.renderer = renderer;
 
-		this.texture = new THREE.VideoTexture(this.video);
-		this.texture.minFilter = THREE.LinearFilter;
-		this.texture.magFilter = THREE.LinearFilter;
-		this.texture.colorSpace = THREE.SRGBColorSpace;
+		this.texture = this.#createTexture();
 
 		this.scene = new THREE.Scene();
 		this.screen = createVideoScreen(this.format, this.texture);
@@ -196,6 +260,26 @@ export class VR180Player {
 		this.flatMode = new FlatMode(this);
 		this.xrMode = new XRMode(this);
 		this.syncUI();
+	}
+
+	// The poster image, shown over the video when it is not playing.
+	// The <video> shows its own poster before the first play. This one is for after a play.
+	#createPoster() {
+		if (!this.video.poster) return null;
+		const poster = document.createElement('img');
+		poster.className = 'vr180-poster hidden';
+		poster.src = this.video.poster;
+		poster.alt = '';
+		this.video.after(poster);
+		return poster;
+	}
+
+	#createTexture() {
+		const texture = new THREE.VideoTexture(this.video);
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.colorSpace = THREE.SRGBColorSpace;
+		return texture;
 	}
 
 	#createPlayButton() {
@@ -213,22 +297,89 @@ export class VR180Player {
 		return playButton;
 	}
 
-	// The play button works after the browser says if it can do VR, and while the video has no error.
+	// The play button works when the browser has said if it can do VR, the source is ready,
+	// and there is no error.
 	#updatePlayButton() {
-		this.playButton.disabled = this.xrSupported === null || Boolean(this.video.error);
+		this.playButton.disabled = this.xrSupported === null || !this.source
+			|| Boolean(this.sourceError) || Boolean(this.video.error);
+	}
+
+	#createSource() {
+		const { video } = this;
+		this.source = null;
+		this.sourceError = null;
+		createSource(video, this.options.hls, { quality: this.quality })
+			.then((source) => {
+				if (video !== this.video) return source.destroy(); // The video was replaced.
+				this.source = source;
+				source.onFatalError = (err) => {
+					this.sourceError = err;
+					this.#updatePlayButton();
+				};
+				source.onQualitiesChanged = () => this.syncUI();
+				this.syncUI();
+			})
+			.catch((err) => {
+				console.error('VR180Player:', err);
+				this.sourceError = err;
+			})
+			.finally(() => this.#updatePlayButton());
+	}
+
+	// Puts a new copy of the <video> in the page, with a new source. Safari's own HLS needs this:
+	// on Vision Pro, a second play on the same element chose a low quality. A new element did not.
+	// Only use it before a play that the viewer starts: Safari lets a new element play with sound
+	// only after the viewer presses play.
+	#replaceVideo() {
+		const old = this.video;
+		const fresh = old.cloneNode(true);
+		if (this.originalSrc === null) fresh.removeAttribute('src');
+		else fresh.setAttribute('src', this.originalSrc);
+		// A quality change sets preload="auto". Do not copy that: then the new video would load
+		// while it is small on the page, and Safari seems to choose the quality from that size.
+		if (this.originalPreload === null) fresh.removeAttribute('preload');
+		else fresh.setAttribute('preload', this.originalPreload);
+		fresh.style.display = '';
+		fresh.muted = old.muted;
+		fresh.volume = old.volume;
+
+		this.source?.destroy();
+		this.videoListeners.abort();
+		delete old.vr180Player;
+		old.replaceWith(fresh);
+		old.removeAttribute('src');
+		old.load(); // Frees the old stream.
+
+		this.video = fresh;
+		fresh.vr180Player = this;
+		this.#listenToVideo();
+		this.#createSource();
+		if (this.texture) {
+			this.texture.dispose();
+			this.texture = this.#createTexture();
+			this.screen.traverse((object) => {
+				if (object.isMesh) object.material.map = this.texture;
+			});
+		}
+		this.syncUI();
 	}
 
 	#listenToVideo() {
 		const { video } = this;
-		const options = { signal: this.listeners.signal };
+		this.videoListeners = new AbortController();
+		const options = { signal: this.videoListeners.signal };
 		const syncUI = () => this.syncUI();
 		for (const type of ['loadedmetadata', 'timeupdate', 'play', 'pause', 'volumechange']) {
 			video.addEventListener(type, syncUI, options);
 		}
+		video.addEventListener('play', () => this.source?.startLoad(), options);
+		// A new source clears an old error, so the play button can work again.
+		video.addEventListener('emptied', () => this.#updatePlayButton(), options);
 		video.addEventListener('ended', () => this.#onEnded(), options);
 		video.addEventListener('error', () => {
-			const error = video.error;
-			console.error('VR180Player: video error:', error ? `code ${error.code}: ${error.message}` : 'unknown');
+			// The error can be from an old source that is already replaced (for example, by hls.js).
+			if (!video.error) return;
+			console.error('VR180Player: video error:', `code ${video.error.code}: ${video.error.message}`);
 			this.#updatePlayButton();
 		}, options);
 	}
@@ -260,10 +411,15 @@ function findOrCreateContainer(video) {
 	return wrapper;
 }
 
+const GENERIC_FILE_NAMES = new Set(['master', 'main', 'index', 'playlist', 'manifest', 'stream', 'video']);
+
 // Makes a title from the file name, for example "my-trip.mp4" becomes "my trip".
 function titleFromSource(video) {
 	const src = video.currentSrc || video.src || video.querySelector('source')?.src;
 	if (!src) return '';
-	const fileName = new URL(src, document.baseURI).pathname.split('/').pop() ?? '';
-	return decodeURIComponent(fileName.replace(/\.[^.]+$/, '')).replace(/[-_]+/g, ' ');
+	const parts = new URL(src, document.baseURI).pathname.split('/').filter(Boolean);
+	let name = (parts.pop() ?? '').replace(/\.[^.]+$/, '');
+	// HLS files often have a general name, such as "master.m3u8". Then the folder name is better.
+	if (GENERIC_FILE_NAMES.has(name.toLowerCase()) && parts.length) name = parts.pop();
+	return decodeURIComponent(name).replace(/[-_]+/g, ' ');
 }

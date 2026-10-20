@@ -2,6 +2,11 @@
 import http.server, os, re, sys
 
 class RangeHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        # Always send the newest files, so a test never runs old code.
+        self.send_header('Cache-Control', 'no-store')
+        super().end_headers()
+
     def send_head(self):
         match = re.match(r'bytes=(\d*)-(\d*)', self.headers.get('Range', ''))
         path = self.translate_path(self.path)
