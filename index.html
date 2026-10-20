@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 	<title>VR180 Web Player</title>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.1.0/vr180player/vr180-player.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.2.0/vr180player/vr180-player.css">
 	<style>
         body {
 		  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
@@ -28,11 +28,11 @@
 			<!-- UI elements will be dynamically inserted here by JavaScript -->
 		</div>
 		<h2>HLS streaming</h2>
-		<p>The same video, streamed with HLS in 8K, 6K, and 4K (the first 60 seconds). Choose the quality with the quality button in the controls.</p>
-		<video data-vr180 preload="none" poster="poster.jpg" title="Demo Video (HLS)" crossOrigin="anonymous" playsinline>
+		<p>The same video, streamed with HLS (the first 60 seconds). In a headset, it plays in 3D in 8K, 6K, or 4K. On other devices, it plays a smaller 2D video with only the left-eye picture, in 3K, 2K, or 1K. Choose the quality with the quality button in the controls.</p>
+		<video data-vr180 data-2d-src="test-media/hls-2d/master.m3u8" preload="none" poster="poster.jpg" title="Demo Video (HLS)" crossOrigin="anonymous" playsinline>
 			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
 		</video>
 	</main>
-	<script type="module" src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.1.0/vr180player/vr180-player.js"></script>
+	<script type="module" src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.2.0/vr180player/vr180-player.js"></script>
 </body>
 </html>
