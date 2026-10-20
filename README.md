@@ -52,6 +52,7 @@ In 2D, the player shows only the left-eye picture, so 2D viewers download the ri
 - Headsets always play the `<source>` (side by side). Other devices play `data-2d-src`.
 - The 2D video is the left half of the side-by-side frame, so it is square, for example 2048×2048. It can be an HLS playlist or a file.
 - Use H.264 for the 2D video, so every browser can play it (Firefox cannot play HEVC). Headsets play HEVC, so the VR video can stay HEVC.
+- With H.264, make the largest 2D size 3072×3072. That is the largest square that most devices can play in H.264. It looks sharp in full screen on a large monitor.
 - `tools/make-test-hls-2d.sh` shows how to make one with ffmpeg.
 
 ### Starting a player from JavaScript
@@ -81,7 +82,7 @@ player.destroy();
 
 To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`.
 
-`dev.html` also plays a 60-second HLS test stream with 3 qualities (8K, 6K, and 4K), in `test-media/hls/`, and in 2D a left-eye stream (2K and 1K, H.264), in `test-media/hls-2d/`. `tools/make-test-hls-2d.sh` makes the 2D stream. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
+`dev.html` also plays a 60-second HLS test stream with 3 qualities (8K, 6K, and 4K), in `test-media/hls/`, and in 2D a left-eye stream (3K, 2K, and 1K, H.264), in `test-media/hls-2d/`. `tools/make-test-hls-2d.sh` makes the 2D stream. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
 
 ## How it works
 When the webpage loads, the video file is embeded normally, with a play button positioned over the poster frame. When the user clicks play, the player script checks if `navigator.xr` exists. If it does, a VR experience is initiated. If not, it builds a rectilinear, 2D view of your video and plays it that way. 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Makes a 60-second 2D HLS test stream, in test-media/hls-2d/. dev.html plays it in 2D (data-2d-src).
+# Makes a 60-second 2D HLS test stream (3K, 2K, 1K), in test-media/hls-2d/. dev.html plays it in 2D (data-2d-src).
 # It has only the left-eye picture of the side-by-side video, so 2D viewers do not download the
 # right half of each frame, which 2D never shows. It is H.264, which every browser can play.
 # Usage: tools/make-test-hls-2d.sh path/to/source-video.mp4
@@ -13,9 +13,10 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 
 # name size video-bitrate (the frames are square: size x size)
-# VideoToolbox makes about half the bitrate it is asked for, so these ask for twice the target
-# (about 6 Mbps for 2K and 2 Mbps for 1K).
-LADDER="2k 2048 12M
+# VideoToolbox often makes less than the bitrate it is asked for, so these ask for more.
+# 3072 x 3072 is the largest square that fits H.264 level 5.1 and 5.2 (5.2 at 60 fps), which most devices can play.
+LADDER="3k 3072 20M
+2k 2048 12M
 1k 1024 4M"
 
 echo "$LADDER" | while read -r name size bitrate; do
