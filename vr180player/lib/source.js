@@ -52,8 +52,16 @@ function hasMediaSource() {
 // - 'hls.js': hls.js first.
 // `quality` is the quality to play: 'auto' (the player or browser chooses), 'best' (the highest),
 // or the id of a quality (its height, for example '2880').
-export async function createSource(video, hlsMode = 'auto', { quality = 'auto' } = {}) {
-	const url = findHlsUrl(video);
+// `url` plays that address instead of the one in the <video> (the player uses it for data-2d-src).
+export async function createSource(video, hlsMode = 'auto', { quality = 'auto', url: otherUrl = null } = {}) {
+	let url = findHlsUrl(video);
+	if (otherUrl) {
+		url = new URL(otherUrl, document.baseURI).href;
+		if (!isHls(url)) {
+			video.src = url;
+			return new FileSource(video);
+		}
+	}
 	if (!url) return new FileSource(video);
 
 	const tryNative = async () => {

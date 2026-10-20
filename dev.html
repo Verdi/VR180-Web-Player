@@ -24,9 +24,9 @@
 		<video data-vr180 data-skip-seconds="5" title="Bottom player (skips 5 s)" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="sbs-video.mp4" type="video/mp4">
 		</video>
-		<p>HLS player. It plays <code>test-media/hls/master.m3u8</code>. To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>?mode=hls.js</code> or <code>?mode=native</code> to choose how HLS plays. Without it, Safari uses its own HLS, and other browsers use hls.js.</p>
-		<p>Test options: <code>?debug</code> shows the video size in the panel title. <code>?quality=best</code> gives Safari's own HLS only the highest quality (the default is <code>auto</code>). Join options with <code>&amp;</code>, for example <code>?debug&amp;quality=best</code>.</p>
-		<video id="hls-test" data-vr180 title="HLS player" preload="none" poster="poster.jpg" crossOrigin="anonymous" playsinline>
+		<p>HLS player. In VR it plays <code>test-media/hls/master.m3u8</code> (side by side, 8K to 4K). In 2D it plays <code>test-media/hls-2d/master.m3u8</code> (left eye only, 3K, 2K, and 1K). To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>?mode=hls.js</code> or <code>?mode=native</code> to choose how HLS plays. Without it, Safari uses its own HLS, and other browsers use hls.js.</p>
+		<p>Test options: <code>?debug</code> shows the video size in the panel title. <code>?quality=best</code> gives Safari's own HLS only the highest quality (the default is <code>auto</code>). <code>?no2d</code> plays the side-by-side stream in 2D too, instead of the 2D stream. Join options with <code>&amp;</code>, for example <code>?debug&amp;quality=best</code>.</p>
+		<video id="hls-test" data-vr180 data-2d-src="test-media/hls-2d/master.m3u8" title="HLS player" preload="none" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
 		</video>
 		<script>
@@ -35,6 +35,7 @@
 			const hlsVideo = document.getElementById('hls-test');
 			if (params.get('hls')) hlsVideo.querySelector('source').src = params.get('hls');
 			if (params.get('mode')) hlsVideo.dataset.hls = params.get('mode');
+			if (params.has('no2d')) delete hlsVideo.dataset['2dSrc'];
 			// Test options for every player on this page.
 			for (const video of document.querySelectorAll('video')) {
 				if (params.has('debug')) video.dataset.debug = '';
