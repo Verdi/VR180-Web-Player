@@ -68,7 +68,7 @@ player.destroy();
 
 To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`.
 
-To make a local HLS test stream for `dev.html` (needs [ffmpeg](https://ffmpeg.org)), run `tools/make-test-hls.sh`.
+`dev.html` also plays an HLS test stream with 5 qualities (8K to 2K), in `test-media/hls/`. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
 
 ## How it works
 When the webpage loads, the video file is embeded normally, with a play button positioned over the poster frame. When the user clicks play, the player script checks if `navigator.xr` exists. If it does, a VR experience is initiated. If not, it builds a rectilinear, 2D view of your video and plays it that way. 

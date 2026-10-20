@@ -16,6 +16,7 @@ const DEFAULT_OPTIONS = {
 	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
 	hlsQuality: 'best', // For the browser's own HLS: 'best' (only the highest quality) or 'auto'.
 	debug: false, // Shows the video size and source type in the panel title.
+	freshVideo: false, // Test option: after each play, replace the <video> with a new copy.
 	title: '',
 };
 
@@ -34,6 +35,8 @@ export class VR180Player {
 		this.title = this.options.title || video.title || titleFromSource(video) || 'Video';
 		this.container = findOrCreateContainer(video);
 		this.listeners = new AbortController();
+		this.videoListeners = null; // Listeners on the current <video>. See #listenToVideo().
+		this.originalSrc = video.getAttribute('src'); // Before a source changes it.
 		this.mode = null; // The FlatMode or XRMode showing the video, or null when the poster shows.
 		this.xrSupported = null; // null until the browser answers.
 		// Three.js objects are made on the first play, so a page with many players
@@ -50,20 +53,7 @@ export class VR180Player {
 		});
 		this.#listenToVideo();
 		video.vr180Player = this;
-
-		createSource(video, this.options.hls, { nativeQuality: this.options.hlsQuality })
-			.then((source) => {
-				this.source = source;
-				source.onFatalError = (err) => {
-					this.sourceError = err;
-					this.#updatePlayButton();
-				};
-			})
-			.catch((err) => {
-				console.error('VR180Player:', err);
-				this.sourceError = err;
-			})
-			.finally(() => this.#updatePlayButton());
+		this.#createSource();
 
 		isXRSupported().then((supported) => {
 			this.xrSupported = supported;
@@ -150,6 +140,7 @@ export class VR180Player {
 		this.poster?.classList.remove('hidden');
 		this.source?.stopLoad();
 
+		if (this.options.freshVideo) this.#replaceVideo();
 		this.playButton.classList.remove('hidden');
 		this.#updatePlayButton();
 	}
@@ -167,6 +158,7 @@ export class VR180Player {
 	debugTitle() {
 		const { video } = this;
 		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
+		if (this.options.freshVideo) parts.push('fresh');
 		return parts.join(' · ');
 	}
 
@@ -180,6 +172,7 @@ export class VR180Player {
 	destroy() {
 		if (this.mode) this.stop();
 		this.listeners.abort();
+		this.videoListeners.abort();
 		this.controls.destroy();
 		this.playButton.remove();
 		this.poster?.remove();
@@ -226,10 +219,7 @@ export class VR180Player {
 		this.video.after(renderer.domElement);
 		this.renderer = renderer;
 
-		this.texture = new THREE.VideoTexture(this.video);
-		this.texture.minFilter = THREE.LinearFilter;
-		this.texture.magFilter = THREE.LinearFilter;
-		this.texture.colorSpace = THREE.SRGBColorSpace;
+		this.texture = this.#createTexture();
 
 		this.scene = new THREE.Scene();
 		this.screen = createVideoScreen(this.format, this.texture);
@@ -254,6 +244,14 @@ export class VR180Player {
 		return poster;
 	}
 
+	#createTexture() {
+		const texture = new THREE.VideoTexture(this.video);
+		texture.minFilter = THREE.LinearFilter;
+		texture.magFilter = THREE.LinearFilter;
+		texture.colorSpace = THREE.SRGBColorSpace;
+		return texture;
+	}
+
 	#createPlayButton() {
 		const playButton = document.createElement('button');
 		playButton.type = 'button';
@@ -276,9 +274,62 @@ export class VR180Player {
 			|| Boolean(this.sourceError) || Boolean(this.video.error);
 	}
 
+	#createSource() {
+		const { video } = this;
+		this.source = null;
+		this.sourceError = null;
+		createSource(video, this.options.hls, { nativeQuality: this.options.hlsQuality })
+			.then((source) => {
+				if (video !== this.video) return source.destroy(); // The video was replaced.
+				this.source = source;
+				source.onFatalError = (err) => {
+					this.sourceError = err;
+					this.#updatePlayButton();
+				};
+			})
+			.catch((err) => {
+				console.error('VR180Player:', err);
+				this.sourceError = err;
+			})
+			.finally(() => this.#updatePlayButton());
+	}
+
+	// Test option freshVideo: puts a new copy of the <video> in the page, with a new source.
+	// This tests whether Safari's own HLS chooses a better quality with a new element.
+	#replaceVideo() {
+		const old = this.video;
+		const fresh = old.cloneNode(true);
+		if (this.originalSrc === null) fresh.removeAttribute('src');
+		else fresh.setAttribute('src', this.originalSrc);
+		fresh.style.display = '';
+		fresh.muted = old.muted;
+		fresh.volume = old.volume;
+
+		this.source?.destroy();
+		this.videoListeners.abort();
+		delete old.vr180Player;
+		old.replaceWith(fresh);
+		old.removeAttribute('src');
+		old.load(); // Frees the old stream.
+
+		this.video = fresh;
+		fresh.vr180Player = this;
+		this.#listenToVideo();
+		this.#createSource();
+		if (this.texture) {
+			this.texture.dispose();
+			this.texture = this.#createTexture();
+			this.screen.traverse((object) => {
+				if (object.isMesh) object.material.map = this.texture;
+			});
+		}
+		this.syncUI();
+	}
+
 	#listenToVideo() {
 		const { video } = this;
-		const options = { signal: this.listeners.signal };
+		this.videoListeners = new AbortController();
+		const options = { signal: this.videoListeners.signal };
 		const syncUI = () => this.syncUI();
 		for (const type of ['loadedmetadata', 'timeupdate', 'play', 'pause', 'volumechange']) {
 			video.addEventListener(type, syncUI, options);
