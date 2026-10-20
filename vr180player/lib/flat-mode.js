@@ -34,7 +34,7 @@ export class FlatMode {
 		this.drag = null;
 		this.#resize();
 
-		video.style.display = 'none';
+		player.hideVideo();
 		canvas.style.display = '';
 		player.screen.visible = true;
 

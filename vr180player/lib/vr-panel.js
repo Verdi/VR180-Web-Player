@@ -150,12 +150,12 @@ export class VRPanel {
 		return mesh;
 	}
 
-	#addBackground(title) {
-		const canvas = document.createElement('canvas');
-		canvas.width = TEXTURE_WIDTH;
-		canvas.height = Math.round(DESIGN.height * TEXTURE_SCALE);
-		const ctx = canvas.getContext('2d');
-
+	// Changes the title on the panel.
+	setTitle(title) {
+		if (title === this.title) return;
+		this.title = title;
+		const { canvas, ctx, texture } = this.background;
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
 		ctx.beginPath();
 		ctx.roundRect(0, 0, canvas.width, canvas.height, DESIGN.cornerRadius * TEXTURE_SCALE);
@@ -166,9 +166,17 @@ export class VRPanel {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'top';
 		ctx.fillText(title, canvas.width / 2, DESIGN.titleTop * TEXTURE_SCALE);
+		texture.needsUpdate = true;
+	}
 
+	#addBackground(title) {
+		const canvas = document.createElement('canvas');
+		canvas.width = TEXTURE_WIDTH;
+		canvas.height = Math.round(DESIGN.height * TEXTURE_SCALE);
 		const texture = new THREE.CanvasTexture(canvas);
 		texture.minFilter = THREE.LinearFilter;
+		this.background = { canvas, ctx: canvas.getContext('2d'), texture };
+		this.setTitle(title);
 		this.#addMesh(PANEL_WIDTH_METERS, DESIGN.height * METERS_PER_PIXEL, fadeMaterial({ map: texture }), {
 			action: 'background',
 		});

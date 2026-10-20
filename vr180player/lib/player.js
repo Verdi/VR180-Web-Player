@@ -14,6 +14,9 @@ const DEFAULT_OPTIONS = {
 	stereo: 'sbs',
 	skipSeconds: 15,
 	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
+	// Test options:
+	debug: false, // Shows the video size and source type in the VR panel title.
+	bigHiddenVideo: false, // While playing, keeps the <video> large but invisible, not hidden.
 	title: '',
 };
 
@@ -142,7 +145,7 @@ export class VR180Player {
 		video.pause();
 		video.currentTime = 0;
 		video.controls = false;
-		video.style.display = '';
+		this.showVideo();
 		// Show the poster image again. The player does not reload the video for this, so the
 		// stream stays loaded. (After a reload, Safari on Vision Pro restarted HLS in low quality.)
 		this.poster?.classList.remove('hidden');
@@ -152,8 +155,29 @@ export class VR180Player {
 		this.#updatePlayButton();
 	}
 
+	// While the video plays in VR or 2D, the <video> element is not shown. The canvas or headset shows it.
+	hideVideo() {
+		if (this.options.bigHiddenVideo) {
+			this.video.classList.add('vr180-video-big-hidden');
+		} else {
+			this.video.style.display = 'none';
+		}
+	}
+
+	showVideo() {
+		this.video.classList.remove('vr180-video-big-hidden');
+		this.video.style.display = '';
+	}
+
+	// The VR panel title in debug mode, for example "HLS player · 3840×1920 · native-hls".
+	debugTitle() {
+		const { video } = this;
+		return `${this.title} · ${video.videoWidth}×${video.videoHeight} · ${this.source?.kind ?? '?'}`;
+	}
+
 	syncUI() {
 		this.controls.update(this.video);
+		if (this.options.debug) this.controls.setTitle(this.debugTitle());
 		this.vrPanel?.update(this.video);
 	}
 

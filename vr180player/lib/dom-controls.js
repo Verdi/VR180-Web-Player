@@ -27,8 +27,8 @@ export class DomControls {
 		this.hideTimer = null;
 		this.root = element('div', 'vr180-panel');
 
-		const titleEl = element('p', 'vr180-title');
-		titleEl.textContent = title;
+		this.titleEl = element('p', 'vr180-title');
+		this.titleEl.textContent = title;
 		this.currentTime = element('p', 'vr180-time vr180-current-time');
 		this.totalTime = element('p', 'vr180-time vr180-total-time');
 		this.bar = element('div', 'vr180-bar');
@@ -37,7 +37,7 @@ export class DomControls {
 		const progress = element('div', 'vr180-progress');
 		progress.append(this.currentTime, this.bar, this.totalTime);
 		const status = element('div', 'vr180-status');
-		status.append(titleEl, progress);
+		status.append(this.titleEl, progress);
 
 		this.playPause = button('vr180-play-pause', 'playPause', 'Play');
 		this.mute = button('vr180-mute', 'mute', 'Mute');
@@ -78,6 +78,10 @@ export class DomControls {
 	hide() {
 		clearTimeout(this.hideTimer);
 		this.root.classList.remove('visible');
+	}
+
+	setTitle(title) {
+		this.titleEl.textContent = title;
 	}
 
 	update(video) {
