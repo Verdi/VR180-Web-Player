@@ -24,6 +24,24 @@
 	cursor: grabbing;
 }
 
+/* Poster image shown after a play, so the player does not have to reload the video */
+
+.vr180-poster {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	background: #000;
+	pointer-events: none;
+	z-index: 5;
+}
+
+.vr180-poster.hidden {
+	display: none;
+}
+
 /* Play button over the poster */
 
 .vr180-play {

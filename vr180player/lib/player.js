@@ -40,6 +40,7 @@ export class VR180Player {
 		this.source = null; // Set when the video source is ready. See source.js.
 		this.sourceError = null;
 
+		this.poster = this.#createPoster();
 		this.playButton = this.#createPlayButton();
 		this.controls = new DomControls(this.container, {
 			title: this.title,
@@ -142,7 +143,10 @@ export class VR180Player {
 		video.currentTime = 0;
 		video.controls = false;
 		video.style.display = '';
-		this.source?.reset(); // Shows the poster frame again.
+		// Show the poster image again. The player does not reload the video for this, so the
+		// stream stays loaded. (After a reload, Safari on Vision Pro restarted HLS in low quality.)
+		this.poster?.classList.remove('hidden');
+		this.source?.stopLoad();
 
 		this.playButton.classList.remove('hidden');
 		this.#updatePlayButton();
@@ -159,6 +163,7 @@ export class VR180Player {
 		this.listeners.abort();
 		this.controls.destroy();
 		this.playButton.remove();
+		this.poster?.remove();
 		this.source?.destroy();
 		if (this.renderer) {
 			this.renderer.setAnimationLoop(null);
@@ -174,6 +179,7 @@ export class VR180Player {
 
 	async #start() {
 		this.playButton.classList.add('hidden');
+		this.poster?.classList.add('hidden');
 		this.#createScene();
 		if (this.xrSupported) {
 			this.mode = this.xrMode;
@@ -215,6 +221,18 @@ export class VR180Player {
 		this.flatMode = new FlatMode(this);
 		this.xrMode = new XRMode(this);
 		this.syncUI();
+	}
+
+	// The poster image, shown over the video when it is not playing.
+	// The <video> shows its own poster before the first play. This one is for after a play.
+	#createPoster() {
+		if (!this.video.poster) return null;
+		const poster = document.createElement('img');
+		poster.className = 'vr180-poster hidden';
+		poster.src = this.video.poster;
+		poster.alt = '';
+		this.video.after(poster);
+		return poster;
 	}
 
 	#createPlayButton() {

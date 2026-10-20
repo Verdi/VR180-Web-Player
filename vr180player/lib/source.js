@@ -68,7 +68,7 @@ export async function createSource(video, hlsMode = 'auto') {
 
 // Every source has the same methods:
 // - startLoad(): called when playback starts.
-// - reset(): goes back to the start and shows the poster again.
+// - stopLoad(): called when the player goes back to the poster. The stream stays ready to play.
 // - destroy(): stops all loading.
 // - onFatalError: set by the player. Called when the video cannot play.
 
@@ -82,9 +82,7 @@ class FileSource {
 
 	startLoad() {}
 
-	reset() {
-		this.video.load();
-	}
+	stopLoad() {}
 
 	destroy() {}
 }
@@ -114,15 +112,15 @@ class HlsJsSource {
 	startLoad() {
 		if (this.loadStarted) return;
 		this.loadStarted = true;
-		this.hls.startLoad();
+		// The first time, hls.js picks the start (the live edge, for a live stream).
+		// After stopLoad(), start where the video is.
+		this.hls.startLoad(this.wasStopped ? this.video.currentTime : -1);
 	}
 
-	// hls.js cannot go back to the poster, so the player makes a new one.
-	reset() {
-		this.hls.destroy();
-		this.video.removeAttribute('src');
-		this.video.load();
-		this.#create();
+	stopLoad() {
+		this.loadStarted = false;
+		this.wasStopped = true;
+		this.hls.stopLoad();
 	}
 
 	destroy() {
