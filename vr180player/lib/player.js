@@ -19,6 +19,7 @@ const DEFAULT_OPTIONS = {
 	// In 2D, the player plays it instead of the <video> source. VR always plays the <video> source.
 	src2d: '',
 	debug: false, // Shows the video size and source type in the panel title.
+	copyEveryFrame: false, // Test option: in VR, copy the picture on every headset frame (the old way).
 	title: '',
 };
 
@@ -50,6 +51,7 @@ export class VR180Player {
 		this.source = null; // Set when the video source is ready. See source.js.
 		this.sourceError = null;
 		this.quality = String(this.options.hlsQuality); // The viewer's choice. See setQuality().
+		this.sizeChanges = 0; // How often the video size changed, for data-debug.
 
 		this.poster = this.#createPoster();
 		this.playButton = this.#createPlayButton();
@@ -199,6 +201,21 @@ export class VR180Player {
 		return parts.join(' · ');
 	}
 
+	// One line for the VR debug label, for example
+	// "4096×2048 · hls.js · 4K · dropped 3 · copies 60/s (0 forced) · size changes 2".
+	debugStatus({ copies, forced }) {
+		const { video } = this;
+		const quality = video.getVideoPlaybackQuality?.();
+		return [
+			`${video.videoWidth}×${video.videoHeight}`,
+			this.source?.kind ?? '?',
+			this.qualityLabel() ?? '',
+			quality ? `dropped ${quality.droppedVideoFrames}` : '',
+			`copies ${copies}/s (${forced} forced)`,
+			`size changes ${this.sizeChanges}`,
+		].filter(Boolean).join(' · ');
+	}
+
 	syncUI() {
 		this.controls.setQualities(this.qualities, this.source?.quality ?? 'auto');
 		this.vrPanel?.setQualityLabel(this.qualityLabel());
@@ -222,6 +239,7 @@ export class VR180Player {
 			disposeVideoScreen(this.screen);
 			if (this.flatScreen !== this.screen) disposeVideoScreen(this.flatScreen);
 			this.vrPanel.dispose();
+			this.xrMode.debugLabel?.dispose();
 			this.renderer.dispose();
 			this.renderer.domElement.remove();
 			this.renderer = null;
@@ -393,6 +411,8 @@ export class VR180Player {
 			video.addEventListener(type, syncUI, options);
 		}
 		video.addEventListener('play', () => this.source?.startLoad(), options);
+		// The first 'resize' is the first frame. Later ones are quality changes.
+		video.addEventListener('resize', () => this.sizeChanges++, options);
 		// A new source clears an old error, so the play button can work again.
 		video.addEventListener('emptied', () => this.#updatePlayButton(), options);
 		video.addEventListener('ended', () => this.#onEnded(), options);

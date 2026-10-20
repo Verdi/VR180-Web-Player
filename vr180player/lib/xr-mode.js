@@ -1,4 +1,8 @@
 import * as THREE from './three.js';
+import { FrameWatcher } from './frame-watcher.js';
+import { DebugLabel } from './debug-label.js';
+
+const DEBUG_LABEL_INTERVAL_MS = 500;
 
 let supportCheck;
 
@@ -25,6 +29,9 @@ export class XRMode {
 		this.raycaster.near = 0.1;
 		this.raycaster.far = 5;
 		this.controllersReady = false;
+		this.frames = new FrameWatcher();
+		this.debugLabel = null; // Made when VR starts with data-debug.
+		this.lastDebugUpdate = 0;
 		this.render = this.render.bind(this);
 		this.onSessionEnd = this.onSessionEnd.bind(this);
 	}
@@ -44,6 +51,10 @@ export class XRMode {
 			}
 
 			this.#setUpControllers();
+			if (player.options.debug && !this.debugLabel) {
+				this.debugLabel = new DebugLabel();
+				player.scene.add(this.debugLabel.mesh);
+			}
 			player.screen.visible = true;
 			player.vrPanel.reset();
 			player.syncUI();
@@ -77,6 +88,7 @@ export class XRMode {
 		this.session = null;
 		session.removeEventListener('end', this.onSessionEnd);
 		player.renderer.setAnimationLoop(null);
+		this.frames.stop();
 		player.screen.visible = false;
 		player.vrPanel.reset();
 		player.reset();
@@ -92,8 +104,18 @@ export class XRMode {
 		player.vrPanel.tick(deltaMs);
 		if (player.options.debug) player.vrPanel.setTitle(player.debugTitle());
 
-		// Quest browsers can skip video frames in VR unless the texture is updated every frame.
-		if (!video.paused && !video.ended) player.texture.needsUpdate = true;
+		// Copy the picture to the GPU when the video has a new frame (see frame-watcher.js).
+		// Before, the player copied it on every headset frame, and the Quest sometimes showed a
+		// flicker in the left eye, which is drawn first.
+		this.frames.watch(video);
+		if (this.frames.shouldCopy(time)) player.texture.needsUpdate = true;
+		// Test option copyEveryFrame: the old way, to compare.
+		if (player.options.copyEveryFrame && !video.paused && !video.ended) player.texture.needsUpdate = true;
+
+		if (this.debugLabel && time - this.lastDebugUpdate > DEBUG_LABEL_INTERVAL_MS) {
+			this.lastDebugUpdate = time;
+			this.debugLabel.setText(player.debugStatus(this.frames.perSecond));
+		}
 
 		try {
 			player.renderer.render(player.scene, this.camera);
