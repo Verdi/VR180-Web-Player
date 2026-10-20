@@ -3,8 +3,11 @@
 // HLS can play in two ways:
 // - native: the browser streams the video itself. Safari does this well, so the player uses it there.
 //   (In Safari on Vision Pro, hls.js stopped when it changed quality. Native HLS did not.)
-//   Safari chooses the quality itself. On Vision Pro it chose a low quality when the same <video>
-//   played a second time, so the player uses a new <video> for each play (needsNewVideoEachPlay).
+//   Safari chooses the quality itself, and it seems to choose from the size of the <video> on the
+//   page when the video starts to load. Tests on Vision Pro: a video that loaded while small on the
+//   page played the lowest quality and never went up. A video that loaded only on play, when the
+//   player hides it, played the highest. So native HLS loads only on play (preload="none"), and the
+//   player uses a new <video> for each play (needsNewVideoEachPlay).
 //   To choose a quality, the player gives it a playlist with only that quality (hls-playlist.js).
 // - hls.js: a script that streams the video into the page (Media Source Extensions).
 //   The player uses it in all other browsers, such as Chrome and the Quest browser.
@@ -128,6 +131,8 @@ class NativeHlsSource extends FileSource {
 		this.url = url;
 		this.playlist = playlist;
 		this.qualities = playlist ? qualitiesInPlaylist(playlist.text) : [];
+		// Load only on play. See the note at the top of this file.
+		video.preload = 'none';
 		this.onError = () => this.#tryNext();
 		this.#usePlaylistFor(quality);
 		this.#tryNext(true);

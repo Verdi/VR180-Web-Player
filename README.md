@@ -31,7 +31,7 @@ Use your HLS stream (`.m3u8`) as the video source:
 	<source src="https://example.com/my-video/master.m3u8" type="application/vnd.apple.mpegurl">
 </video>
 ```
-- Add `preload="none"`. Without it, some browsers start to download the stream before the player is ready.
+- Add `preload="none"`. Without it, some browsers start to download the stream before the player is ready. (In Safari, the player always waits for play before it loads the stream, because Safari chooses a low quality if the stream loads while the video is small on the page.)
 - Your video server must allow cross-origin requests (CORS) for the playlists and the video files. Without CORS, the browser cannot draw the video in 3D.
 - In Safari (Mac, Vision Pro, iPhone), the browser plays the stream itself. Other browsers, such as Chrome and the Quest browser, use [hls.js](https://github.com/video-dev/hls.js). The player loads hls.js only when it needs it.
 - To choose, add `data-hls="native"` (the browser's own HLS) or `data-hls="hls.js"`. If that way cannot work in the browser, the player uses the other one.
