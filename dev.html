@@ -44,6 +44,58 @@
 			}
 		</script>
 	</main>
+	<script>
+		// Test logging. With ?log=NAME, this page sends the players' log to ntfy.sh/NAME, so a test in a
+		// headset can be read later. Use a long random NAME: anyone who knows it can read the log.
+		// The log holds only player data: events, times, sizes, and errors.
+		(() => {
+			const params = new URLSearchParams(location.search);
+			const topic = params.get('log');
+			if (!topic) return;
+			for (const video of document.querySelectorAll('video')) video.dataset.debug = '';
+
+			const SEND_EVERY_MS = 10000;
+			const MAX_BATCH_BYTES = 3500; // ntfy.sh keeps a message as text up to 4096 bytes.
+			const STATUS_EVERY_MS = 2000;
+			const started = performance.now();
+			let lines = [];
+			let size = 0;
+
+			const stamp = () => `+${((performance.now() - started) / 1000).toFixed(1)}s`;
+			const add = (line) => {
+				lines.push(line);
+				size += line.length + 1;
+				if (size > MAX_BATCH_BYTES) send();
+			};
+			const send = (useBeacon = false) => {
+				if (!lines.length) return;
+				const body = lines.join('\n');
+				lines = [];
+				size = 0;
+				const url = `https://ntfy.sh/${encodeURIComponent(topic)}`;
+				if (useBeacon) navigator.sendBeacon(url, body);
+				else fetch(url, { method: 'POST', body }).catch((err) => console.warn('Log not sent:', err));
+			};
+
+			add(`${stamp()} [page] ${location.pathname}${location.search.replace(/log=[^&]*&?/, '')}`);
+			document.addEventListener('vr180-log', (event) => {
+				const { type, ...details } = event.detail;
+				const title = event.target.querySelector('video')?.title ?? '?';
+				add(`${stamp()} [${type}] ${title} · ${Object.entries(details).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+			});
+			// A status line every 2 seconds for each player that is playing.
+			setInterval(() => {
+				for (const video of document.querySelectorAll('video')) {
+					const player = video.vr180Player;
+					if (!player?.mode) continue;
+					const layer = player.mode === player.xrMode ? (player.xrMode.mediaLayer ? 'media layer' : 'WebGL') : '2D';
+					add(`${stamp()} [status] ${video.title} · ${player.debugStatus(layer)} · t=${video.currentTime.toFixed(1)} ${video.paused ? 'paused' : 'playing'}`);
+				}
+			}, STATUS_EVERY_MS);
+			setInterval(() => send(), SEND_EVERY_MS);
+			addEventListener('pagehide', () => send(true));
+		})();
+	</script>
 	<script type="module" src="vr180player/vr180-player.js"></script>
 </body>
 </html>

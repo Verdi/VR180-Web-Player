@@ -302,7 +302,13 @@ class HlsJsSource {
 		hls.on(Hls.Events.FRAG_LOADED, () => {
 			this.networkRetries = 0;
 		});
-		hls.on(Hls.Events.ERROR, (_event, data) => this.#onError(data));
+		hls.on(Hls.Events.ERROR, (_event, data) => {
+			this.onLog?.('hls error', { details: data.details, fatal: data.fatal });
+			this.#onError(data);
+		});
+		hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+			this.onLog?.('hls level', { height: hls.levels[data.level]?.height });
+		});
 		hls.loadSource(this.url);
 		hls.attachMedia(video);
 	}

@@ -117,6 +117,7 @@ export class VR180Player {
 	// Changes the HLS quality: 'auto', or an id from `qualities`. The video keeps its place.
 	setQuality(id) {
 		if (!this.source || id === this.source.quality) return;
+		this.log('quality', { to: id });
 		if (this.source.setQuality(id)) this.quality = id;
 		this.syncUI();
 	}
@@ -162,6 +163,7 @@ export class VR180Player {
 
 	// Goes back to the start state: poster frame and play button.
 	reset() {
+		this.log('back to poster');
 		this.stallGuard.stop();
 		if (this.mode === this.flatMode) this.flatMode.stop();
 		this.mode = null;
@@ -223,6 +225,23 @@ export class VR180Player {
 		].filter(Boolean).join(' · ');
 	}
 
+	// With data-debug, sends a log entry as a 'vr180-log' event on the player's container, for
+	// example for dev.html. The player itself never sends logs over the network.
+	log(type, details = {}) {
+		if (!this.options.debug) return;
+		const { video } = this;
+		this.container.dispatchEvent(new CustomEvent('vr180-log', {
+			bubbles: true,
+			detail: {
+				type,
+				...details,
+				t: Number(video.currentTime.toFixed(2)),
+				ready: video.readyState,
+				ahead: Number(bufferedAhead(video).toFixed(1)),
+			},
+		}));
+	}
+
 	syncUI() {
 		this.controls.setQualities(this.qualities, this.source?.quality ?? 'auto');
 		this.vrPanel?.setQualityLabel(this.qualityLabel());
@@ -258,6 +277,7 @@ export class VR180Player {
 		this.playButton.classList.add('hidden');
 		this.poster?.classList.add('hidden');
 		this.#createScene();
+		this.log('start', { mode: this.xrSupported ? 'VR' : '2D' });
 		if (this.xrSupported) {
 			this.mode = this.xrMode;
 			await this.xrMode.enter();
@@ -361,6 +381,8 @@ export class VR180Player {
 					this.#updatePlayButton();
 				};
 				source.onQualitiesChanged = () => this.syncUI();
+				source.onLog = (type, details) => this.log(type, details);
+				this.log('source', { kind: source.kind });
 				this.syncUI();
 			})
 			.catch((err) => {
@@ -419,6 +441,12 @@ export class VR180Player {
 			video.addEventListener(type, syncUI, options);
 		}
 		video.addEventListener('play', () => this.source?.startLoad(), options);
+		if (this.options.debug) {
+			for (const type of ['play', 'pause', 'seeking', 'seeked', 'waiting', 'stalled', 'playing', 'ended', 'error']) {
+				video.addEventListener(type, () => this.log(`video ${type}`), options);
+			}
+			video.addEventListener('resize', () => this.log('video resize', { size: `${video.videoWidth}x${video.videoHeight}` }), options);
+		}
 		// The first 'resize' is the first frame. Later ones are quality changes.
 		video.addEventListener('resize', () => this.sizeChanges++, options);
 		// A new source clears an old error, so the play button can work again.

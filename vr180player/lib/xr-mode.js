@@ -145,6 +145,7 @@ export class XRMode {
 			console.warn('VR180Player: could not make a media layer, so the video is drawn with WebGL:', err);
 			this.mediaLayer = null;
 		}
+		player.log('vr layer', { layer: this.mediaLayer ? 'media layer' : 'WebGL' });
 		if (!this.mediaLayer) return;
 		// Hide the WebGL video sphere, and make the Three.js layer clear, so the video shows through.
 		player.screen.visible = false;

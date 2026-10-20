@@ -54,12 +54,14 @@ export class StallGuard {
 		if (ahead >= LOADED_AHEAD_SECONDS && stuckMs >= STUCK_WITH_DATA_MS) {
 			this.fixes++;
 			console.warn(`VR180Player: video stuck at ${video.currentTime.toFixed(1)} s with ${ahead.toFixed(1)} s loaded. Pausing and playing again.`);
+			this.player.log('stall fix', { how: 'pause and play', stuckMs: Math.round(stuckMs) });
 			video.pause();
 			setTimeout(() => video.play().catch((err) => console.error('VR180Player: could not play again:', err)), 100);
 			this.#moved();
 		} else if (stuckMs >= STUCK_WITHOUT_DATA_MS) {
 			this.fixes++;
 			console.warn(`VR180Player: video stuck at ${video.currentTime.toFixed(1)} s with nothing loaded. Loading again.`);
+			this.player.log('stall fix', { how: 'load again', stuckMs: Math.round(stuckMs) });
 			source?.restartLoad?.(video.currentTime);
 			this.#moved();
 		}
