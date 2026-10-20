@@ -55,18 +55,13 @@ export async function createSource(video, hlsMode = 'auto', { quality = 'auto' }
 
 	const tryNative = async () => {
 		if (!video.canPlayType('application/vnd.apple.mpegurl')) return null;
-		let qualities = [];
-		let fixed = null;
+		let playlist = null;
 		try {
-			const { text, baseUrl } = await loadPlaylist(url);
-			qualities = qualitiesInPlaylist(text);
-			const target = quality === 'best' ? qualities[0] : qualities.find((q) => q.id === quality);
-			const rewritten = target && playlistWithOnlyHeight(text, baseUrl, target.height);
-			if (rewritten) fixed = { quality: target, urls: playlistUrls(rewritten) };
+			playlist = await loadPlaylist(url);
 		} catch (err) {
 			console.warn('VR180Player: could not read the HLS playlist, so the browser chooses the quality:', err);
 		}
-		return new NativeHlsSource(video, url, qualities, fixed);
+		return new NativeHlsSource(video, url, playlist, quality);
 	};
 	const tryHlsJs = async () => {
 		if (!hasMediaSource()) return null;
@@ -96,8 +91,8 @@ export async function createSource(video, hlsMode = 'auto', { quality = 'auto' }
 // - qualities: the qualities to choose from, highest first, as [{ id, label }]. Empty if there is no choice.
 // - quality: the chosen quality: 'auto' or an id from `qualities`.
 // - onQualitiesChanged: set by the player. Called when `qualities` or `quality` changes.
-// - setQuality(id): changes the quality and returns true. Returns false if the source cannot
-//   change it while playing. Then the player makes a new <video> and source with that quality.
+// - setQuality(id): changes the quality and returns true. Returns false if there is no choice.
+//   The video keeps its place, and plays on if it was playing.
 
 // A normal video file. The browser does all the work.
 class FileSource {
@@ -123,18 +118,49 @@ class FileSource {
 }
 
 // HLS played by the browser itself (Safari).
-// With `fixed` ({ quality, urls }), it plays a playlist with only that quality. It tries each
-// address in `urls` in turn. If the browser refuses all of them, it plays the original playlist.
+// For a fixed quality, it plays a playlist with only that quality. It tries each address for that
+// playlist in turn (see playlistUrls()). If the browser refuses all of them, it plays the original.
+// `playlist` is { text, baseUrl } from loadPlaylist(), or null if it could not be read.
 class NativeHlsSource extends FileSource {
-	constructor(video, url, qualities, fixed) {
+	constructor(video, url, playlist, quality) {
 		super(video);
 		this.needsNewVideoEachPlay = true;
-		this.qualities = qualities;
-		this.fixedQuality = fixed?.quality ?? null;
-		this.tries = [...(fixed?.urls ?? []), { how: null, url }];
+		this.url = url;
+		this.playlist = playlist;
+		this.qualities = playlist ? qualitiesInPlaylist(playlist.text) : [];
 		this.onError = () => this.#tryNext();
-		if (fixed) video.addEventListener('error', this.onError);
+		this.#usePlaylistFor(quality);
 		this.#tryNext(true);
+	}
+
+	// Changes the playlist on the same <video>. Safari lets this element play, because the viewer
+	// started it. A new element would need a new tap before it can play with sound.
+	setQuality(id) {
+		if (!this.qualities.length) return false;
+		const { video } = this;
+		const time = video.currentTime;
+		const play = !video.paused && !video.ended;
+		// Load the new playlist now, also when paused, so the video can go back to `time`.
+		video.preload = 'auto';
+		this.#usePlaylistFor(id);
+		video.addEventListener('loadedmetadata', () => {
+			video.currentTime = time;
+		}, { once: true });
+		this.playRequested = play;
+		this.#tryNext(true);
+		if (play) video.play().catch((err) => console.error('VR180Player: could not play after the quality change:', err));
+		this.onQualitiesChanged?.();
+		return true;
+	}
+
+	// Sets the playlists to try for a quality: 'auto', 'best', or a quality id.
+	#usePlaylistFor(quality) {
+		const target = quality === 'best' ? this.qualities[0] : this.qualities.find((q) => q.id === quality);
+		const rewritten = target && playlistWithOnlyHeight(this.playlist.text, this.playlist.baseUrl, target.height);
+		this.fixedQuality = rewritten ? target : null;
+		this.tries = [...(rewritten ? playlistUrls(rewritten) : []), { how: null, url: this.url }];
+		this.video.removeEventListener('error', this.onError);
+		if (rewritten) this.video.addEventListener('error', this.onError);
 	}
 
 	startLoad() {
@@ -158,7 +184,8 @@ class NativeHlsSource extends FileSource {
 		this.kind = next.how ? `native-hls (${this.fixedQuality.label}, ${next.how})`
 			: first ? 'native-hls' : 'native-hls (quality failed)';
 		if (!first) this.onQualitiesChanged?.();
-		if (this.video.getAttribute('src') !== next.url) this.video.src = next.url;
+		if (this.video.getAttribute('src') === next.url) return;
+		this.video.src = next.url;
 		// The refused playlist also stopped playback. Start it again with the next playlist.
 		if (!first && this.playRequested) {
 			this.video.play().catch((err) => console.error('VR180Player: could not play video:', err));

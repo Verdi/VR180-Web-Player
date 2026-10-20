@@ -108,15 +108,8 @@ export class VR180Player {
 	// Changes the HLS quality: 'auto', or an id from `qualities`. The video keeps its place.
 	setQuality(id) {
 		if (!this.source || id === this.source.quality) return;
-		this.quality = id;
-		if (this.source.setQuality(id)) {
-			this.syncUI();
-			return;
-		}
-		// The source cannot change the quality while it plays, so make a new <video> with it.
-		const { video } = this;
-		const resume = this.mode ? { time: video.currentTime, play: !video.paused && !video.ended } : null;
-		this.#replaceVideo(resume);
+		if (this.source.setQuality(id)) this.quality = id;
+		this.syncUI();
 	}
 
 	// Goes to the next quality: Auto, then each quality from highest to lowest, then Auto again.
@@ -313,7 +306,7 @@ export class VR180Player {
 		const { video } = this;
 		this.source = null;
 		this.sourceError = null;
-		return createSource(video, this.options.hls, { quality: this.quality })
+		createSource(video, this.options.hls, { quality: this.quality })
 			.then((source) => {
 				if (video !== this.video) return source.destroy(); // The video was replaced.
 				this.source = source;
@@ -333,17 +326,16 @@ export class VR180Player {
 
 	// Puts a new copy of the <video> in the page, with a new source. Safari's own HLS needs this:
 	// on Vision Pro, a second play on the same element chose a low quality. A new element did not.
-	// It is also how Safari's own HLS changes quality. With `resume` ({ time, play }), the new
-	// video continues at that time, and plays if `play` is true.
-	#replaceVideo(resume = null) {
+	// Only use it before a play that the viewer starts: Safari lets a new element play with sound
+	// only after the viewer presses play.
+	#replaceVideo() {
 		const old = this.video;
 		const fresh = old.cloneNode(true);
 		if (this.originalSrc === null) fresh.removeAttribute('src');
 		else fresh.setAttribute('src', this.originalSrc);
-		fresh.style.display = old.style.display;
+		fresh.style.display = '';
 		fresh.muted = old.muted;
 		fresh.volume = old.volume;
-		if (resume) fresh.preload = 'auto';
 
 		this.source?.destroy();
 		this.videoListeners.abort();
@@ -355,8 +347,7 @@ export class VR180Player {
 		this.video = fresh;
 		fresh.vr180Player = this;
 		this.#listenToVideo();
-		const sourceReady = this.#createSource();
-		if (resume) this.#resume(fresh, sourceReady, resume);
+		this.#createSource();
 		if (this.texture) {
 			this.texture.dispose();
 			this.texture = this.#createTexture();
@@ -365,21 +356,6 @@ export class VR180Player {
 			});
 		}
 		this.syncUI();
-	}
-
-	#resume(video, sourceReady, { time, play }) {
-		video.addEventListener('loadedmetadata', () => {
-			video.currentTime = time;
-		}, { once: true, signal: this.videoListeners.signal });
-		sourceReady.then(() => {
-			if (video !== this.video) return;
-			this.source?.startLoad();
-			if (play) {
-				video.play().catch((err) => console.error('VR180Player: could not play after the quality change:', err));
-			} else {
-				video.load();
-			}
-		});
 	}
 
 	#listenToVideo() {
