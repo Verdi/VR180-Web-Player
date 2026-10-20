@@ -6,6 +6,7 @@ import { DomControls } from './dom-controls.js';
 import { FlatMode } from './flat-mode.js';
 import { XRMode, isXRSupported } from './xr-mode.js';
 import { createSource } from './source.js';
+import { StallGuard, bufferedAhead } from './stall-guard.js';
 
 const PLAY_ICON_URL = new URL('../images/play.png', import.meta.url).href;
 
@@ -19,6 +20,7 @@ const DEFAULT_OPTIONS = {
 	// In 2D, the player plays it instead of the <video> source. VR always plays the <video> source.
 	src2d: '',
 	debug: false, // Shows the video size and source type in the panel title.
+	xrLayer: 'auto', // Test option: 'webgl' draws the video with WebGL in VR, not as a media layer.
 	title: '',
 };
 
@@ -50,6 +52,8 @@ export class VR180Player {
 		this.source = null; // Set when the video source is ready. See source.js.
 		this.sourceError = null;
 		this.quality = String(this.options.hlsQuality); // The viewer's choice. See setQuality().
+		this.sizeChanges = 0; // How often the video size changed, for data-debug.
+		this.stallGuard = new StallGuard(this);
 
 		this.poster = this.#createPoster();
 		this.playButton = this.#createPlayButton();
@@ -113,6 +117,7 @@ export class VR180Player {
 	// Changes the HLS quality: 'auto', or an id from `qualities`. The video keeps its place.
 	setQuality(id) {
 		if (!this.source || id === this.source.quality) return;
+		this.log('quality', { to: id });
 		if (this.source.setQuality(id)) this.quality = id;
 		this.syncUI();
 	}
@@ -158,6 +163,8 @@ export class VR180Player {
 
 	// Goes back to the start state: poster frame and play button.
 	reset() {
+		this.log('back to poster');
+		this.stallGuard.stop();
 		if (this.mode === this.flatMode) this.flatMode.stop();
 		this.mode = null;
 		this.controls.hide();
@@ -199,6 +206,42 @@ export class VR180Player {
 		return parts.join(' · ');
 	}
 
+	// One line for the VR debug label, for example
+	// "4096×2048 · hls.js · 4K · media layer · ahead 12.0 s · ready 4 · dropped 3 · stall fixes 0 · size changes 2".
+	// `layer` is how VR shows the video: 'media layer' or 'WebGL'.
+	debugStatus(layer) {
+		const { video } = this;
+		const quality = video.getVideoPlaybackQuality?.();
+		return [
+			`${video.videoWidth}×${video.videoHeight}`,
+			this.source?.kind ?? '?',
+			this.qualityLabel() ?? '',
+			layer,
+			`ahead ${bufferedAhead(video).toFixed(1)} s`,
+			`ready ${video.readyState}`,
+			quality ? `dropped ${quality.droppedVideoFrames}` : '',
+			`stall fixes ${this.stallGuard.fixes}`,
+			`size changes ${this.sizeChanges}`,
+		].filter(Boolean).join(' · ');
+	}
+
+	// With data-debug, sends a log entry as a 'vr180-log' event on the player's container, for
+	// example for dev.html. The player itself never sends logs over the network.
+	log(type, details = {}) {
+		if (!this.options.debug) return;
+		const { video } = this;
+		this.container.dispatchEvent(new CustomEvent('vr180-log', {
+			bubbles: true,
+			detail: {
+				type,
+				...details,
+				t: Number(video.currentTime.toFixed(2)),
+				ready: video.readyState,
+				ahead: Number(bufferedAhead(video).toFixed(1)),
+			},
+		}));
+	}
+
 	syncUI() {
 		this.controls.setQualities(this.qualities, this.source?.quality ?? 'auto');
 		this.vrPanel?.setQualityLabel(this.qualityLabel());
@@ -222,6 +265,7 @@ export class VR180Player {
 			disposeVideoScreen(this.screen);
 			if (this.flatScreen !== this.screen) disposeVideoScreen(this.flatScreen);
 			this.vrPanel.dispose();
+			this.xrMode.debugLabel?.dispose();
 			this.renderer.dispose();
 			this.renderer.domElement.remove();
 			this.renderer = null;
@@ -233,6 +277,7 @@ export class VR180Player {
 		this.playButton.classList.add('hidden');
 		this.poster?.classList.add('hidden');
 		this.#createScene();
+		this.log('start', { mode: this.xrSupported ? 'VR' : '2D' });
 		if (this.xrSupported) {
 			this.mode = this.xrMode;
 			await this.xrMode.enter();
@@ -240,6 +285,7 @@ export class VR180Player {
 			this.mode = this.flatMode;
 			this.flatMode.start();
 		}
+		if (this.mode) this.stallGuard.start();
 	}
 
 	#createScene() {
@@ -335,6 +381,8 @@ export class VR180Player {
 					this.#updatePlayButton();
 				};
 				source.onQualitiesChanged = () => this.syncUI();
+				source.onLog = (type, details) => this.log(type, details);
+				this.log('source', { kind: source.kind });
 				this.syncUI();
 			})
 			.catch((err) => {
@@ -393,6 +441,14 @@ export class VR180Player {
 			video.addEventListener(type, syncUI, options);
 		}
 		video.addEventListener('play', () => this.source?.startLoad(), options);
+		if (this.options.debug) {
+			for (const type of ['play', 'pause', 'seeking', 'seeked', 'waiting', 'stalled', 'playing', 'ended', 'error']) {
+				video.addEventListener(type, () => this.log(`video ${type}`), options);
+			}
+			video.addEventListener('resize', () => this.log('video resize', { size: `${video.videoWidth}x${video.videoHeight}` }), options);
+		}
+		// The first 'resize' is the first frame. Later ones are quality changes.
+		video.addEventListener('resize', () => this.sizeChanges++, options);
 		// A new source clears an old error, so the play button can work again.
 		video.addEventListener('emptied', () => this.#updatePlayButton(), options);
 		video.addEventListener('ended', () => this.#onEnded(), options);

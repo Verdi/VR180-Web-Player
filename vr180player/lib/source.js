@@ -37,7 +37,7 @@ function isHls(url, type) {
 }
 
 // Safari on Mac, Vision Pro, iPhone, and iPad. (Chrome on iPhone is Safari inside, too.)
-function isAppleBrowser() {
+export function isAppleBrowser() {
 	return /^Apple/.test(navigator.vendor ?? '');
 }
 
@@ -265,6 +265,13 @@ class HlsJsSource {
 		this.hls.stopLoad();
 	}
 
+	// Loads again from `time`. The stall guard uses it when the video is stuck with nothing loaded.
+	restartLoad(time) {
+		this.hls.stopLoad();
+		this.hls.startLoad(time);
+		this.loadStarted = true;
+	}
+
 	destroy() {
 		this.hls.destroy();
 	}
@@ -295,7 +302,13 @@ class HlsJsSource {
 		hls.on(Hls.Events.FRAG_LOADED, () => {
 			this.networkRetries = 0;
 		});
-		hls.on(Hls.Events.ERROR, (_event, data) => this.#onError(data));
+		hls.on(Hls.Events.ERROR, (_event, data) => {
+			this.onLog?.('hls error', { details: data.details, fatal: data.fatal });
+			this.#onError(data);
+		});
+		hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+			this.onLog?.('hls level', { height: hls.levels[data.level]?.height });
+		});
 		hls.loadSource(this.url);
 		hls.attachMedia(video);
 	}

@@ -15,6 +15,8 @@ export const PROJECTIONS = {
 			return geometry;
 		},
 		rotationY: Math.PI / 2,
+		// The sphere part for a WebXR media layer (see media-layer.js).
+		mediaLayer: { centralHorizontalAngle: Math.PI, upperVerticalAngle: Math.PI / 2, lowerVerticalAngle: -Math.PI / 2 },
 		// How far the 2D view can turn before the edge of the video shows.
 		maxYaw: Math.PI / 4,
 		maxPitch: Math.PI / 4,
@@ -23,10 +25,11 @@ export const PROJECTIONS = {
 
 // The part of the frame each eye sees, as [offsetU, offsetV, scaleU, scaleV] in texture coordinates.
 // A layout with no `right` entry is mono: both eyes see `left`.
+// `mediaLayout` is the name of the layout for a WebXR media layer (see media-layer.js).
 export const LAYOUTS = {
-	sbs: { left: [0, 0, 0.5, 1], right: [0.5, 0, 0.5, 1] },
+	sbs: { left: [0, 0, 0.5, 1], right: [0.5, 0, 0.5, 1], mediaLayout: 'stereo-left-right' },
 	// One picture for both eyes. For example, a 2D playlist with only the left-eye picture.
-	mono: { left: [0, 0, 1, 1] },
+	mono: { left: [0, 0, 1, 1], mediaLayout: 'mono' },
 };
 
 export function resolveFormat({ projection = '180', stereo = 'sbs' } = {}) {

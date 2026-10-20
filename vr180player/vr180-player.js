@@ -19,6 +19,7 @@ function optionsFromAttributes(video) {
 	const options = {};
 	if (video.dataset['2dSrc']) options.src2d = video.dataset['2dSrc']; // data-2d-src
 	if (debug !== undefined) options.debug = true;
+	if (video.dataset.xrLayer) options.xrLayer = video.dataset.xrLayer;
 	if (hls) options.hls = hls;
 	if (hlsQuality) options.hlsQuality = hlsQuality;
 	if (projection) options.projection = projection;
