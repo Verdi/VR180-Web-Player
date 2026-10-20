@@ -1,10 +1,11 @@
 // Where the video comes from: a normal file (such as MP4) or an HLS stream (.m3u8).
 //
 // HLS can play in two ways:
+// - native: the browser streams the video itself. Safari does this well, so the player uses it there.
+//   (In Safari on Vision Pro, hls.js stopped when it changed quality. Native HLS did not.)
 // - hls.js: a script that streams the video into the page (Media Source Extensions).
-//   It works in Chrome, the Quest browser, and Safari, including on Vision Pro.
-// - native: the browser streams the video itself. Only Apple browsers do this well.
-// hls.js is loaded from the CDN only when a page has an HLS video.
+//   The player uses it in all other browsers, such as Chrome and the Quest browser.
+// hls.js is loaded from the CDN only when the player uses it.
 
 // hls.js is locked to one version, so a new hls.js release cannot break the player.
 const HLS_JS_URL = 'https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.mjs';
@@ -27,12 +28,20 @@ function isHls(url, type) {
 	return HLS_TYPES.includes(type?.toLowerCase()) || /\.m3u8($|[?#])/i.test(url);
 }
 
+// Safari on Mac, Vision Pro, iPhone, and iPad. (Chrome on iPhone is Safari inside, too.)
+function isAppleBrowser() {
+	return /^Apple/.test(navigator.vendor ?? '');
+}
+
 function hasMediaSource() {
 	return Boolean(window.ManagedMediaSource || window.MediaSource);
 }
 
 // Makes the right source for a video.
-// `hlsMode` is 'auto' (hls.js first, then native) or 'native' (native first, then hls.js).
+// `hlsMode` picks how HLS plays. If the first way cannot work, the player tries the other one.
+// - 'auto': native HLS in Safari, hls.js in other browsers.
+// - 'native': native HLS first.
+// - 'hls.js': hls.js first.
 export async function createSource(video, hlsMode = 'auto') {
 	const url = findHlsUrl(video);
 	if (!url) return new FileSource(video);
@@ -49,7 +58,8 @@ export async function createSource(video, hlsMode = 'auto') {
 		}
 	};
 
-	const source = hlsMode === 'native'
+	const nativeFirst = hlsMode === 'native' || (hlsMode !== 'hls.js' && isAppleBrowser());
+	const source = nativeFirst
 		? tryNative() ?? (await tryHlsJs())
 		: (await tryHlsJs()) ?? tryNative();
 	if (!source) throw new Error('This browser cannot play HLS streams.');

@@ -24,7 +24,7 @@
 		<video data-vr180 data-skip-seconds="5" title="Bottom player (skips 5 s)" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="sbs-video.mp4" type="video/mp4">
 		</video>
-		<p>HLS player. It plays <code>test-media/hls/master.m3u8</code>. To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>&amp;mode=native</code> to use the browser's own HLS.</p>
+		<p>HLS player. It plays <code>test-media/hls/master.m3u8</code>. To test another stream, add <code>?hls=</code> and the stream address to this page's address. Add <code>?mode=hls.js</code> or <code>?mode=native</code> to choose how HLS plays. Without it, Safari uses its own HLS, and other browsers use hls.js.</p>
 		<video id="hls-test" data-vr180 title="HLS player" preload="none" poster="poster.jpg" crossOrigin="anonymous" playsinline>
 			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
 		</video>

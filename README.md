@@ -33,8 +33,8 @@ Use your HLS stream (`.m3u8`) as the video source:
 ```
 - Add `preload="none"`. Without it, some browsers start to download the stream before the player is ready.
 - Your video server must allow cross-origin requests (CORS) for the playlists and the video files. Without CORS, the browser cannot draw the video in 3D.
-- The player uses [hls.js](https://github.com/video-dev/hls.js) to play the stream. It loads hls.js only when a page has an HLS video.
-- To use the browser's own HLS instead (Safari only), add `data-hls="native"`. If the browser cannot do this, the player uses hls.js.
+- In Safari (Mac, Vision Pro, iPhone), the browser plays the stream itself. Other browsers, such as Chrome and the Quest browser, use [hls.js](https://github.com/video-dev/hls.js). The player loads hls.js only when it needs it.
+- To choose, add `data-hls="native"` (the browser's own HLS) or `data-hls="hls.js"`. If that way cannot work in the browser, the player uses the other one.
 
 ### Starting a player from JavaScript
 ```

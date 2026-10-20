@@ -13,7 +13,7 @@ const DEFAULT_OPTIONS = {
 	projection: '180',
 	stereo: 'sbs',
 	skipSeconds: 15,
-	hls: 'auto', // 'auto' uses hls.js first. 'native' uses the browser's own HLS first (Safari).
+	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
 	title: '',
 };
 
