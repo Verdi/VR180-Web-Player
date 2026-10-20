@@ -14,10 +14,8 @@ const DEFAULT_OPTIONS = {
 	stereo: 'sbs',
 	skipSeconds: 15,
 	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
-	// Test options:
-	debug: false, // Shows the video size and source type in the VR panel title.
-	bigHiddenVideo: false, // While playing, keeps the <video> large but invisible, not hidden.
-	lockHlsQuality: false, // Gives Safari's own HLS a playlist with only the highest quality.
+	hlsQuality: 'best', // For the browser's own HLS: 'best' (only the highest quality) or 'auto'.
+	debug: false, // Shows the video size and source type in the panel title.
 	title: '',
 };
 
@@ -53,7 +51,7 @@ export class VR180Player {
 		this.#listenToVideo();
 		video.vr180Player = this;
 
-		createSource(video, this.options.hls, { lockBestQuality: this.options.lockHlsQuality })
+		createSource(video, this.options.hls, { nativeQuality: this.options.hlsQuality })
 			.then((source) => {
 				this.source = source;
 				source.onFatalError = (err) => {
@@ -158,24 +156,17 @@ export class VR180Player {
 
 	// While the video plays in VR or 2D, the <video> element is not shown. The canvas or headset shows it.
 	hideVideo() {
-		if (this.options.bigHiddenVideo) {
-			this.video.classList.add('vr180-video-big-hidden');
-		} else {
-			this.video.style.display = 'none';
-		}
+		this.video.style.display = 'none';
 	}
 
 	showVideo() {
-		this.video.classList.remove('vr180-video-big-hidden');
 		this.video.style.display = '';
 	}
 
-	// The VR panel title in debug mode, for example "HLS player · 3840×1920 · native-hls · 2x · big".
+	// The panel title in debug mode, for example "HLS player · 3840×1920 · native-hls (best, data) · 2x".
 	debugTitle() {
 		const { video } = this;
 		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
-		if (this.options.bigHiddenVideo) parts.push('big');
-		if (this.options.lockHlsQuality) parts.push('lock');
 		return parts.join(' · ');
 	}
 

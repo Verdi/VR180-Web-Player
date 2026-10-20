@@ -8,7 +8,8 @@ const STREAM_INF = '#EXT-X-STREAM-INF:';
 const PLAYLIST_TYPE = 'application/vnd.apple.mpegurl';
 
 // Returns addresses for a playlist that has only the highest resolution in `url`, as
-// [{ how, url }]. Browsers accept different kinds of address, so there is a blob: one and a data: one.
+// [{ how, url }]. Browsers accept different kinds of address, so there is a data: one and a blob: one.
+// Safari on Vision Pro accepts data: and refuses blob:, so data: comes first.
 // Returns [] if there is nothing to remove (one quality, or not a multivariant playlist).
 export async function bestQualityPlaylistUrls(url) {
 	const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
@@ -16,8 +17,8 @@ export async function bestQualityPlaylistUrls(url) {
 	const rewritten = keepBestQuality(await response.text(), response.url || url);
 	if (!rewritten) return [];
 	return [
-		{ how: 'blob', url: URL.createObjectURL(new Blob([rewritten], { type: PLAYLIST_TYPE })) },
 		{ how: 'data', url: `data:${PLAYLIST_TYPE},${encodeURIComponent(rewritten)}` },
+		{ how: 'blob', url: URL.createObjectURL(new Blob([rewritten], { type: PLAYLIST_TYPE })) },
 	];
 }
 

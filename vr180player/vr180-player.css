@@ -24,19 +24,6 @@
 	cursor: grabbing;
 }
 
-/* Test option bigHiddenVideo: the <video> stays large (3840 x 1920 page pixels) but cannot be seen. */
-.vr180-video-big-hidden {
-	position: fixed !important;
-	top: 0;
-	left: 0;
-	width: 3840px !important;
-	height: 1920px !important;
-	max-width: none !important;
-	opacity: 0;
-	pointer-events: none;
-	z-index: -1;
-}
-
 /* Poster image shown after a play, so the player does not have to reload the video */
 
 .vr180-poster {
