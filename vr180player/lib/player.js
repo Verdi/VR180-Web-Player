@@ -169,10 +169,12 @@ export class VR180Player {
 		this.video.style.display = '';
 	}
 
-	// The VR panel title in debug mode, for example "HLS player · 3840×1920 · native-hls".
+	// The VR panel title in debug mode, for example "HLS player · 3840×1920 · native-hls · 2x · big".
 	debugTitle() {
 		const { video } = this;
-		return `${this.title} · ${video.videoWidth}×${video.videoHeight} · ${this.source?.kind ?? '?'}`;
+		const parts = [this.title, `${video.videoWidth}×${video.videoHeight}`, this.source?.kind ?? '?', `${window.devicePixelRatio}x`];
+		if (this.options.bigHiddenVideo) parts.push('big');
+		return parts.join(' · ');
 	}
 
 	syncUI() {
