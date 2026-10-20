@@ -36,9 +36,10 @@ Use your HLS stream (`.m3u8`) as the video source:
 - In Safari (Mac, Vision Pro, iPhone), the browser plays the stream itself. Other browsers, such as Chrome and the Quest browser, use [hls.js](https://github.com/video-dev/hls.js). The player loads hls.js only when it needs it.
 - To choose, add `data-hls="native"` (the browser's own HLS) or `data-hls="hls.js"`. If that way cannot work in the browser, the player uses the other one.
 - Quality:
-  - With hls.js, the player starts at the highest quality. It goes down only if the connection is too slow.
-  - With the browser's own HLS, the browser chooses the quality. The player uses a new `<video>` element for each play, because on Vision Pro, Safari chose a low quality when the same element played a second time.
-  - To give the browser's own HLS only the highest resolution, add `data-hls-quality="best"`. Then the video does not get blurry, but on a slow connection it pauses to load.
+  - **Auto** is the default. With hls.js, the player starts at the highest quality and goes down only if the connection is too slow. With the browser's own HLS, the browser chooses. (The player uses a new `<video>` element for each play, because on Vision Pro, Safari chose a low quality when the same element played a second time.)
+  - **The viewer can choose a quality.** The VR panel has a quality button between "forward" and "mute": each tap goes to the next quality. The 2D controls have a quality menu. The list comes from the qualities in your HLS playlist, so there is nothing to set up. MP4 videos have no quality choice.
+  - With the browser's own HLS, a fixed quality works like in [OpenImmersive](https://github.com/acuteimmersive/openimmersive): the player gives the browser a playlist with only that quality. A change takes a moment, because the video loads again at the same time.
+  - To start with a fixed quality, add `data-hls-quality="best"` (the highest) or a height, such as `data-hls-quality="2880"`.
 - To see which quality plays, add `data-debug`. The control panel title then shows the video size and how the stream plays.
 
 ### Starting a player from JavaScript

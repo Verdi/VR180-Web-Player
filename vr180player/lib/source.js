@@ -5,12 +5,12 @@
 //   (In Safari on Vision Pro, hls.js stopped when it changed quality. Native HLS did not.)
 //   Safari chooses the quality itself. On Vision Pro it chose a low quality when the same <video>
 //   played a second time, so the player uses a new <video> for each play (needsNewVideoEachPlay).
-//   With hlsQuality 'best', the player gives it a playlist with only the highest quality (hls-playlist.js).
+//   To choose a quality, the player gives it a playlist with only that quality (hls-playlist.js).
 // - hls.js: a script that streams the video into the page (Media Source Extensions).
 //   The player uses it in all other browsers, such as Chrome and the Quest browser.
 // hls.js is loaded from the CDN only when the player uses it.
 
-import { bestQualityPlaylistUrls } from './hls-playlist.js';
+import { loadPlaylist, qualitiesInPlaylist, qualitiesFromVariants, playlistWithOnlyHeight, playlistUrls } from './hls-playlist.js';
 
 // hls.js is locked to one version, so a new hls.js release cannot break the player.
 const HLS_JS_URL = 'https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.mjs';
@@ -47,28 +47,32 @@ function hasMediaSource() {
 // - 'auto': native HLS in Safari, hls.js in other browsers.
 // - 'native': native HLS first.
 // - 'hls.js': hls.js first.
-// `nativeQuality` is for native HLS: 'auto' lets it choose; 'best' gives it only the highest quality.
-export async function createSource(video, hlsMode = 'auto', { nativeQuality = 'auto' } = {}) {
+// `quality` is the quality to play: 'auto' (the player or browser chooses), 'best' (the highest),
+// or the id of a quality (its height, for example '2880').
+export async function createSource(video, hlsMode = 'auto', { quality = 'auto' } = {}) {
 	const url = findHlsUrl(video);
 	if (!url) return new FileSource(video);
 
 	const tryNative = async () => {
 		if (!video.canPlayType('application/vnd.apple.mpegurl')) return null;
-		let bestUrls = [];
-		if (nativeQuality === 'best') {
-			try {
-				bestUrls = await bestQualityPlaylistUrls(url);
-			} catch (err) {
-				console.warn('VR180Player: could not make a best-quality playlist, so the browser chooses the quality:', err);
-			}
+		let qualities = [];
+		let fixed = null;
+		try {
+			const { text, baseUrl } = await loadPlaylist(url);
+			qualities = qualitiesInPlaylist(text);
+			const target = quality === 'best' ? qualities[0] : qualities.find((q) => q.id === quality);
+			const rewritten = target && playlistWithOnlyHeight(text, baseUrl, target.height);
+			if (rewritten) fixed = { quality: target, urls: playlistUrls(rewritten) };
+		} catch (err) {
+			console.warn('VR180Player: could not read the HLS playlist, so the browser chooses the quality:', err);
 		}
-		return new NativeHlsSource(video, url, bestUrls);
+		return new NativeHlsSource(video, url, qualities, fixed);
 	};
 	const tryHlsJs = async () => {
 		if (!hasMediaSource()) return null;
 		try {
 			const { default: Hls } = await import(HLS_JS_URL);
-			return Hls.isSupported() ? new HlsJsSource(Hls, video, url) : null;
+			return Hls.isSupported() ? new HlsJsSource(Hls, video, url, quality) : null;
 		} catch (err) {
 			console.error('VR180Player: could not load hls.js:', err);
 			return null;
@@ -89,6 +93,11 @@ export async function createSource(video, hlsMode = 'auto', { nativeQuality = 'a
 // - destroy(): stops all loading.
 // - onFatalError: set by the player. Called when the video cannot play.
 // - needsNewVideoEachPlay: true if the player must use a new <video> for each play.
+// - qualities: the qualities to choose from, highest first, as [{ id, label }]. Empty if there is no choice.
+// - quality: the chosen quality: 'auto' or an id from `qualities`.
+// - onQualitiesChanged: set by the player. Called when `qualities` or `quality` changes.
+// - setQuality(id): changes the quality and returns true. Returns false if the source cannot
+//   change it while playing. Then the player makes a new <video> and source with that quality.
 
 // A normal video file. The browser does all the work.
 class FileSource {
@@ -97,6 +106,13 @@ class FileSource {
 		this.video = video;
 		this.onFatalError = null;
 		this.needsNewVideoEachPlay = false;
+		this.qualities = [];
+		this.quality = 'auto';
+		this.onQualitiesChanged = null;
+	}
+
+	setQuality() {
+		return false;
 	}
 
 	startLoad() {}
@@ -107,15 +123,17 @@ class FileSource {
 }
 
 // HLS played by the browser itself (Safari).
-// With `bestUrls`, it tries each best-quality playlist in turn. If the browser refuses one,
-// it tries the next one, and at the end the original playlist.
+// With `fixed` ({ quality, urls }), it plays a playlist with only that quality. It tries each
+// address in `urls` in turn. If the browser refuses all of them, it plays the original playlist.
 class NativeHlsSource extends FileSource {
-	constructor(video, url, bestUrls = []) {
+	constructor(video, url, qualities, fixed) {
 		super(video);
 		this.needsNewVideoEachPlay = true;
-		this.tries = [...bestUrls, { how: null, url }];
+		this.qualities = qualities;
+		this.fixedQuality = fixed?.quality ?? null;
+		this.tries = [...(fixed?.urls ?? []), { how: null, url }];
 		this.onError = () => this.#tryNext();
-		if (bestUrls.length) video.addEventListener('error', this.onError);
+		if (fixed) video.addEventListener('error', this.onError);
 		this.#tryNext(true);
 	}
 
@@ -136,8 +154,10 @@ class NativeHlsSource extends FileSource {
 		if (!next) return;
 		if (!first) console.warn('VR180Player: the browser refused the playlist. Trying the next one.');
 		if (!next.how) this.video.removeEventListener('error', this.onError);
-		this.kind = next.how ? `native-hls (best, ${next.how})`
-			: first ? 'native-hls' : 'native-hls (best failed)';
+		this.quality = next.how ? this.fixedQuality.id : 'auto';
+		this.kind = next.how ? `native-hls (${this.fixedQuality.label}, ${next.how})`
+			: first ? 'native-hls' : 'native-hls (quality failed)';
+		if (!first) this.onQualitiesChanged?.();
 		if (this.video.getAttribute('src') !== next.url) this.video.src = next.url;
 		// The refused playlist also stopped playback. Start it again with the next playlist.
 		if (!first && this.playRequested) {
@@ -148,14 +168,47 @@ class NativeHlsSource extends FileSource {
 
 // HLS played with hls.js.
 class HlsJsSource {
-	constructor(Hls, video, url) {
+	constructor(Hls, video, url, quality) {
 		this.kind = 'hls.js';
 		this.needsNewVideoEachPlay = false;
 		this.Hls = Hls;
 		this.video = video;
 		this.url = url;
 		this.onFatalError = null;
+		this.qualities = []; // Known when hls.js has read the playlist.
+		this.quality = 'auto';
+		this.requestedQuality = quality;
+		this.onQualitiesChanged = null;
 		this.#create();
+	}
+
+	setQuality(id) {
+		this.#applyQuality(id, false);
+		this.onQualitiesChanged?.();
+		return true;
+	}
+
+	// `starting`: true before the first piece loads.
+	#applyQuality(id, starting) {
+		const { hls } = this;
+		const levels = hls.levels;
+		const height = id === 'best' ? Math.max(...levels.map((l) => l.height)) : Number(id);
+		// The level at that height with the highest bitrate. hls.js sorts levels from lowest to highest.
+		const index = levels.findLastIndex((l) => l.height === height);
+		if (id === 'auto' || index === -1) {
+			this.quality = 'auto';
+			// Start with the best quality. Low quality looks very bad in a headset.
+			if (starting) hls.startLevel = levels.length - 1;
+			else hls.currentLevel = -1; // Let hls.js choose again.
+		} else {
+			this.quality = String(height);
+			if (starting) {
+				hls.startLevel = index;
+				hls.loadLevel = index; // A fixed level: hls.js does not change it.
+			} else {
+				hls.currentLevel = index; // Change now, and drop what was loaded in the old quality.
+			}
+		}
 	}
 
 	startLoad() {
@@ -191,10 +244,10 @@ class HlsJsSource {
 			useMediaCapabilities: false,
 		});
 		this.hls = hls;
-		// Start with the best quality. Low quality looks very bad in a headset.
-		// hls.js sorts the qualities from lowest to highest.
 		hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-			hls.startLevel = data.levels.length - 1;
+			this.qualities = qualitiesFromVariants(data.levels);
+			this.#applyQuality(this.requestedQuality, true);
+			this.onQualitiesChanged?.();
 		});
 		this.loadStarted = autoStartLoad;
 		this.networkRetries = 0;

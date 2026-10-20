@@ -21,6 +21,29 @@ export const ICONS = {
 	soundOff: { size: 24, path: 'M6.9082 2.8985C7.71639 2.45747 8.74994 3.03437 8.75 4.00006V14.0001C8.75 15.0301 7.57405 15.6181 6.75 15.0001L3.64746 12.6729L1.10449 11.8253C0.594245 11.655 0.250012 11.1776 0.25 10.6397V7.36041C0.25005 6.82252 0.594258 6.34508 1.10449 6.17486L3.64746 5.32623L6.75 3.00006L6.9082 2.8985ZM4.51465 6.55182C4.4341 6.61218 4.34631 6.66193 4.25391 6.70123L4.16016 6.73736L1.75 7.5401V10.459L4.16016 11.2628L4.25391 11.2989C4.31551 11.3251 4.37502 11.356 4.43164 11.3917L4.51465 11.4483L7.25 13.4991V4.50006L4.51465 6.55182ZM9.60156 5.53033C9.89446 5.23755 10.3693 5.23748 10.6621 5.53033L13.1318 8.00006L15.541 5.59088C15.8339 5.29821 16.3087 5.29806 16.6016 5.59088C16.8944 5.8837 16.8942 6.35852 16.6016 6.65143L14.1924 9.06061L16.6729 11.5411C16.9654 11.834 16.9655 12.3088 16.6729 12.6016C16.38 12.8945 15.9042 12.8945 15.6113 12.6016L13.1309 10.1212L10.5908 12.6622C10.2979 12.9549 9.82313 12.955 9.53027 12.6622C9.23742 12.3693 9.23749 11.8945 9.53027 11.6016L12.0703 9.06061L9.60156 6.59088C9.30867 6.29799 9.30867 5.82323 9.60156 5.53033Z' },
 };
 
+const textIcons = new Map();
+
+// An icon that shows a short text in a rounded box, for example "Auto" or "8K".
+// The same text always gives the same icon, so the panel draws it again only when the text changes.
+export function textIcon(text) {
+	if (!textIcons.has(text)) {
+		textIcons.set(text, {
+			draw(ctx) {
+				ctx.font = `600 ${text.length > 4 ? 9 : 12}px Helvetica, Arial, sans-serif`;
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(text, 22, 22.5);
+				ctx.strokeStyle = ctx.fillStyle;
+				ctx.lineWidth = 1.5;
+				ctx.beginPath();
+				ctx.roundRect(5, 13, 34, 19, 5);
+				ctx.stroke();
+			},
+		});
+	}
+	return textIcons.get(text);
+}
+
 // Draws an icon so that it fills a square canvas.
 export function drawIcon(ctx, canvasSize, icon, color = '#ffffff') {
 	const scale = canvasSize / GRID;

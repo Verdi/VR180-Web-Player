@@ -14,7 +14,7 @@ const DEFAULT_OPTIONS = {
 	stereo: 'sbs',
 	skipSeconds: 15,
 	hls: 'auto', // 'auto', 'native', or 'hls.js'. See createSource() in source.js.
-	hlsQuality: 'auto', // For the browser's own HLS: 'auto' (the browser chooses) or 'best' (only the highest).
+	hlsQuality: 'auto', // The first HLS quality: 'auto', 'best' (the highest), or a height such as '2880'.
 	debug: false, // Shows the video size and source type in the panel title.
 	title: '',
 };
@@ -43,6 +43,7 @@ export class VR180Player {
 		this.renderer = null;
 		this.source = null; // Set when the video source is ready. See source.js.
 		this.sourceError = null;
+		this.quality = String(this.options.hlsQuality); // The viewer's choice. See setQuality().
 
 		this.poster = this.#createPoster();
 		this.playButton = this.#createPlayButton();
@@ -99,6 +100,39 @@ export class VR180Player {
 		request?.catch((err) => console.error('VR180Player: full screen failed:', err));
 	}
 
+	// The qualities the viewer can choose, highest first, as [{ id, label }]. Empty if there is no choice.
+	get qualities() {
+		return this.source?.qualities ?? [];
+	}
+
+	// Changes the HLS quality: 'auto', or an id from `qualities`. The video keeps its place.
+	setQuality(id) {
+		if (!this.source || id === this.source.quality) return;
+		this.quality = id;
+		if (this.source.setQuality(id)) {
+			this.syncUI();
+			return;
+		}
+		// The source cannot change the quality while it plays, so make a new <video> with it.
+		const { video } = this;
+		const resume = this.mode ? { time: video.currentTime, play: !video.paused && !video.ended } : null;
+		this.#replaceVideo(resume);
+	}
+
+	// Goes to the next quality: Auto, then each quality from highest to lowest, then Auto again.
+	nextQuality() {
+		const ids = ['auto', ...this.qualities.map((q) => q.id)];
+		const current = ids.indexOf(this.source?.quality ?? 'auto');
+		this.setQuality(ids[(current + 1) % ids.length]);
+	}
+
+	// A short name for the current quality choice, or null if there is no choice.
+	qualityLabel() {
+		if (!this.qualities.length) return null;
+		const quality = this.source.quality;
+		return this.qualities.find((q) => q.id === quality)?.label ?? 'Auto';
+	}
+
 	// Runs a control action. The 2D controls and the VR panel both use this.
 	runAction(action, value) {
 		const skipSeconds = this.options.skipSeconds;
@@ -110,6 +144,7 @@ export class VR180Player {
 			case 'seek': this.seekToFraction(value); break;
 			case 'fullscreen': this.toggleFullscreen(); break;
 			case 'exit': this.stop(); break;
+			case 'quality': value === undefined ? this.nextQuality() : this.setQuality(value); break;
 			default: console.warn(`VR180Player: unknown action "${action}".`);
 		}
 	}
@@ -161,6 +196,8 @@ export class VR180Player {
 	}
 
 	syncUI() {
+		this.controls.setQualities(this.qualities, this.source?.quality ?? 'auto');
+		this.vrPanel?.setQualityLabel(this.qualityLabel());
 		this.controls.update(this.video);
 		if (this.options.debug) this.controls.setTitle(this.debugTitle());
 		this.vrPanel?.update(this.video);
@@ -276,7 +313,7 @@ export class VR180Player {
 		const { video } = this;
 		this.source = null;
 		this.sourceError = null;
-		createSource(video, this.options.hls, { nativeQuality: this.options.hlsQuality })
+		return createSource(video, this.options.hls, { quality: this.quality })
 			.then((source) => {
 				if (video !== this.video) return source.destroy(); // The video was replaced.
 				this.source = source;
@@ -284,6 +321,8 @@ export class VR180Player {
 					this.sourceError = err;
 					this.#updatePlayButton();
 				};
+				source.onQualitiesChanged = () => this.syncUI();
+				this.syncUI();
 			})
 			.catch((err) => {
 				console.error('VR180Player:', err);
@@ -294,14 +333,17 @@ export class VR180Player {
 
 	// Puts a new copy of the <video> in the page, with a new source. Safari's own HLS needs this:
 	// on Vision Pro, a second play on the same element chose a low quality. A new element did not.
-	#replaceVideo() {
+	// It is also how Safari's own HLS changes quality. With `resume` ({ time, play }), the new
+	// video continues at that time, and plays if `play` is true.
+	#replaceVideo(resume = null) {
 		const old = this.video;
 		const fresh = old.cloneNode(true);
 		if (this.originalSrc === null) fresh.removeAttribute('src');
 		else fresh.setAttribute('src', this.originalSrc);
-		fresh.style.display = '';
+		fresh.style.display = old.style.display;
 		fresh.muted = old.muted;
 		fresh.volume = old.volume;
+		if (resume) fresh.preload = 'auto';
 
 		this.source?.destroy();
 		this.videoListeners.abort();
@@ -313,7 +355,8 @@ export class VR180Player {
 		this.video = fresh;
 		fresh.vr180Player = this;
 		this.#listenToVideo();
-		this.#createSource();
+		const sourceReady = this.#createSource();
+		if (resume) this.#resume(fresh, sourceReady, resume);
 		if (this.texture) {
 			this.texture.dispose();
 			this.texture = this.#createTexture();
@@ -322,6 +365,21 @@ export class VR180Player {
 			});
 		}
 		this.syncUI();
+	}
+
+	#resume(video, sourceReady, { time, play }) {
+		video.addEventListener('loadedmetadata', () => {
+			video.currentTime = time;
+		}, { once: true, signal: this.videoListeners.signal });
+		sourceReady.then(() => {
+			if (video !== this.video) return;
+			this.source?.startLoad();
+			if (play) {
+				video.play().catch((err) => console.error('VR180Player: could not play after the quality change:', err));
+			} else {
+				video.load();
+			}
+		});
 	}
 
 	#listenToVideo() {

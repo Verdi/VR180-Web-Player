@@ -160,8 +160,9 @@
 
 .vr180-controls {
 	display: grid;
-	grid-template-areas: "full lflex nav rflex mute";
-	grid-template-columns: 44px 1fr 156px 1fr 44px;
+	grid-template-areas: "full lflex nav rflex quality mute";
+	grid-template-columns: 44px 1fr 156px 1fr auto 44px;
+	align-items: center;
 	height: 44px;
 }
 
@@ -199,6 +200,27 @@
 .vr180-play-pause:hover { background-image: url(images/play2-hover.png); }
 .vr180-play-pause.is-playing { background-image: url(images/pause.png); }
 .vr180-play-pause.is-playing:hover { background-image: url(images/pause-hover.png); }
+
+/* The quality menu */
+.vr180-quality {
+	grid-area: quality;
+	margin-right: 8px;
+	padding: 4px 6px;
+	border: 1.5px solid #fff;
+	border-radius: 6px;
+	background: transparent;
+	color: #fff;
+	font: 600 0.75rem system-ui, sans-serif;
+	cursor: pointer;
+}
+
+.vr180-quality[hidden] {
+	display: none;
+}
+
+.vr180-quality option {
+	color: #000;
+}
 
 /* The mute button shows what a click does: "mute" when sound is on, "unmute" when muted. */
 .vr180-mute { grid-area: mute; background-image: url(images/mute.png); }
