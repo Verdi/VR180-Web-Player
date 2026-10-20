@@ -35,7 +35,9 @@ export class VR180Player {
 		this.container = findOrCreateContainer(video);
 		this.listeners = new AbortController();
 		this.videoListeners = null; // Listeners on the current <video>. See #listenToVideo().
-		this.originalSrc = video.getAttribute('src'); // Before a source changes it.
+		// Before a source changes them. A new <video> gets these again (see #replaceVideo()).
+		this.originalSrc = video.getAttribute('src');
+		this.originalPreload = video.getAttribute('preload');
 		this.mode = null; // The FlatMode or XRMode showing the video, or null when the poster shows.
 		this.xrSupported = null; // null until the browser answers.
 		// Three.js objects are made on the first play, so a page with many players
@@ -333,6 +335,10 @@ export class VR180Player {
 		const fresh = old.cloneNode(true);
 		if (this.originalSrc === null) fresh.removeAttribute('src');
 		else fresh.setAttribute('src', this.originalSrc);
+		// A quality change sets preload="auto". Do not copy that: then the new video would load
+		// while it is small on the page, and Safari seems to choose the quality from that size.
+		if (this.originalPreload === null) fresh.removeAttribute('preload');
+		else fresh.setAttribute('preload', this.originalPreload);
 		fresh.style.display = '';
 		fresh.muted = old.muted;
 		fresh.volume = old.volume;
