@@ -11,6 +11,7 @@ const HLS_JS_URL = 'https://cdn.jsdelivr.net/npm/hls.js@1.7.3/dist/hls.min.mjs';
 const HLS_TYPES = ['application/vnd.apple.mpegurl', 'application/x-mpegurl', 'audio/mpegurl'];
 const MAX_NETWORK_RETRIES = 3;
 const MAX_MEDIA_RECOVERIES = 2;
+const START_BANDWIDTH_ESTIMATE = 20_000_000; // bits per second
 
 // Finds the HLS address in the <video src> or in a <source> element. Returns null for a normal file.
 export function findHlsUrl(video) {
@@ -122,8 +123,22 @@ class HlsJsSource {
 		const { Hls, video } = this;
 		// Like a normal video: load the stream only when it plays, unless the page asks for preload="auto".
 		const autoStartLoad = video.getAttribute('preload') === 'auto';
-		const hls = new Hls({ autoStartLoad });
+		const hls = new Hls({
+			autoStartLoad,
+			// hls.js guesses a slow connection (0.5 Mbps) until it measures one. Immersive video
+			// needs a fast one, so guess fast. hls.js moves down if the connection is slower.
+			abrEwmaDefaultEstimate: START_BANDWIDTH_ESTIMATE,
+			// hls.js skips any quality that the browser says is not "smooth". Browsers often say this
+			// about large immersive video that they play well, so hls.js falls to the lowest quality.
+			// Formats that the browser cannot play at all are still skipped.
+			useMediaCapabilities: false,
+		});
 		this.hls = hls;
+		// Start with the best quality. Low quality looks very bad in a headset.
+		// hls.js sorts the qualities from lowest to highest.
+		hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+			hls.startLevel = data.levels.length - 1;
+		});
 		this.loadStarted = autoStartLoad;
 		this.networkRetries = 0;
 		this.mediaRecoveries = 0;
