@@ -1,6 +1,7 @@
 import * as THREE from './three.js';
-import { FrameWatcher } from './frame-watcher.js';
 import { DebugLabel } from './debug-label.js';
+import { mediaLayersSupported, addMediaLayer } from './media-layer.js';
+import { isAppleBrowser } from './source.js';
 
 const DEBUG_LABEL_INTERVAL_MS = 500;
 
@@ -29,7 +30,7 @@ export class XRMode {
 		this.raycaster.near = 0.1;
 		this.raycaster.far = 5;
 		this.controllersReady = false;
-		this.frames = new FrameWatcher();
+		this.mediaLayer = null; // The WebXR media layer that shows the video, or null (see media-layer.js).
 		this.debugLabel = null; // Made when VR starts with data-debug.
 		this.lastDebugUpdate = 0;
 		this.render = this.render.bind(this);
@@ -41,7 +42,10 @@ export class XRMode {
 		const { renderer, video } = player;
 		try {
 			// This must be the first await, so the browser still sees the user's click.
-			const session = await navigator.xr.requestSession('immersive-vr', { requiredFeatures: ['local-floor'] });
+			const session = await navigator.xr.requestSession('immersive-vr', {
+				requiredFeatures: ['local-floor'],
+				optionalFeatures: this.#wantsMediaLayer() ? ['layers'] : [],
+			});
 			this.session = session;
 			session.addEventListener('end', this.onSessionEnd);
 
@@ -60,6 +64,7 @@ export class XRMode {
 			player.syncUI();
 
 			await renderer.xr.setSession(session);
+			this.#useMediaLayer(session);
 			this.lastFrameTime = 0;
 			renderer.setAnimationLoop(this.render);
 		} catch (err) {
@@ -88,7 +93,10 @@ export class XRMode {
 		this.session = null;
 		session.removeEventListener('end', this.onSessionEnd);
 		player.renderer.setAnimationLoop(null);
-		this.frames.stop();
+		if (this.mediaLayer) {
+			this.mediaLayer = null; // The layer ends with the session.
+			player.renderer.setClearAlpha(1);
+		}
 		player.screen.visible = false;
 		player.vrPanel.reset();
 		player.reset();
@@ -104,17 +112,13 @@ export class XRMode {
 		player.vrPanel.tick(deltaMs);
 		if (player.options.debug) player.vrPanel.setTitle(player.debugTitle());
 
-		// Copy the picture to the GPU when the video has a new frame (see frame-watcher.js).
-		// Before, the player copied it on every headset frame, and the Quest sometimes showed a
-		// flicker in the left eye, which is drawn first.
-		this.frames.watch(video);
-		if (this.frames.shouldCopy(time)) player.texture.needsUpdate = true;
-		// Test option copyEveryFrame: the old way, to compare.
-		if (player.options.copyEveryFrame && !video.paused && !video.ended) player.texture.needsUpdate = true;
+		// With a media layer, the headset shows the video itself. Without one, copy the picture to
+		// the GPU on every frame: Quest browsers can skip video frames in VR otherwise.
+		if (!this.mediaLayer && !video.paused && !video.ended) player.texture.needsUpdate = true;
 
 		if (this.debugLabel && time - this.lastDebugUpdate > DEBUG_LABEL_INTERVAL_MS) {
 			this.lastDebugUpdate = time;
-			this.debugLabel.setText(player.debugStatus(this.frames.perSecond));
+			this.debugLabel.setText(player.debugStatus(this.mediaLayer ? 'media layer' : 'WebGL'));
 		}
 
 		try {
@@ -124,6 +128,27 @@ export class XRMode {
 			player.renderer.setAnimationLoop(null);
 			this.exit();
 		}
+	}
+
+	// The media layer is for the Quest. Safari on Vision Pro keeps the WebGL way, which works well there.
+	// The test option xrLayer: 'webgl' turns the media layer off.
+	#wantsMediaLayer() {
+		return mediaLayersSupported() && !isAppleBrowser() && this.player.options.xrLayer !== 'webgl';
+	}
+
+	#useMediaLayer(session) {
+		const { player } = this;
+		if (!this.#wantsMediaLayer()) return;
+		try {
+			this.mediaLayer = addMediaLayer(session, player.renderer, player.video, player.format);
+		} catch (err) {
+			console.warn('VR180Player: could not make a media layer, so the video is drawn with WebGL:', err);
+			this.mediaLayer = null;
+		}
+		if (!this.mediaLayer) return;
+		// Hide the WebGL video sphere, and make the Three.js layer clear, so the video shows through.
+		player.screen.visible = false;
+		player.renderer.setClearAlpha(0);
 	}
 
 	#setUpControllers() {

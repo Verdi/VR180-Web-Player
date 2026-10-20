@@ -72,8 +72,9 @@ player.destroy();
 | `source.js` | Where the video comes from: a normal file, or an HLS stream (with hls.js or the browser's own HLS). |
 | `hls-playlist.js` | Makes an HLS playlist with only the highest quality, for the browser's own HLS. |
 | `formats.js` | Video formats: the shape the video is drawn on, and where each eye's picture is in the frame (side by side, or mono for a 2D video). |
-| `video-screen.js` | Makes the 3D surface for the video. Each eye gets its own copy. |
+| `video-screen.js` | Makes the 3D surface for the video. Each eye gets its own copy. Used in 2D, and in VR on Vision Pro. |
 | `xr-mode.js` | VR mode on a headset. |
+| `media-layer.js` | On the Quest, shows the video directly in the headset as a WebXR media layer, with no copy to the GPU. |
 | `vr-panel.js` | The control panel you see in VR. |
 | `flat-mode.js` | 2D mode on a normal screen, with drag to look around. |
 | `dom-controls.js` | The control panel you see in 2D. |

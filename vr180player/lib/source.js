@@ -37,7 +37,7 @@ function isHls(url, type) {
 }
 
 // Safari on Mac, Vision Pro, iPhone, and iPad. (Chrome on iPhone is Safari inside, too.)
-function isAppleBrowser() {
+export function isAppleBrowser() {
 	return /^Apple/.test(navigator.vendor ?? '');
 }
 

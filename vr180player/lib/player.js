@@ -19,7 +19,7 @@ const DEFAULT_OPTIONS = {
 	// In 2D, the player plays it instead of the <video> source. VR always plays the <video> source.
 	src2d: '',
 	debug: false, // Shows the video size and source type in the panel title.
-	copyEveryFrame: false, // Test option: in VR, copy the picture on every headset frame (the old way).
+	xrLayer: 'auto', // Test option: 'webgl' draws the video with WebGL in VR, not as a media layer.
 	title: '',
 };
 
@@ -202,16 +202,17 @@ export class VR180Player {
 	}
 
 	// One line for the VR debug label, for example
-	// "4096×2048 · hls.js · 4K · dropped 3 · copies 60/s (0 forced) · size changes 2".
-	debugStatus({ copies, forced }) {
+	// "4096×2048 · hls.js · 4K · media layer · dropped 3 · size changes 2".
+	// `layer` is how VR shows the video: 'media layer' or 'WebGL'.
+	debugStatus(layer) {
 		const { video } = this;
 		const quality = video.getVideoPlaybackQuality?.();
 		return [
 			`${video.videoWidth}×${video.videoHeight}`,
 			this.source?.kind ?? '?',
 			this.qualityLabel() ?? '',
+			layer,
 			quality ? `dropped ${quality.droppedVideoFrames}` : '',
-			`copies ${copies}/s (${forced} forced)`,
 			`size changes ${this.sizeChanges}`,
 		].filter(Boolean).join(' · ');
 	}
