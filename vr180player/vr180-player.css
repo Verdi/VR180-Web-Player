@@ -9,6 +9,8 @@
 	position: relative;
 	display: inline-block;
 	width: 100%;
+	/* The controls use a compact layout when the player is narrow (see the end of this file). */
+	container-type: inline-size;
 }
 
 video#vr180,
@@ -47,6 +49,44 @@ video[data-vr180],
 
 .vr180-poster.hidden {
 	display: none;
+}
+
+/* Full screen. The browser's own full screen (:fullscreen), or the player's own, for Safari on iPhone. */
+
+.vr180-container.vr180-fullscreen {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	height: 100dvh; /* The visible height on phones, without the browser bars. */
+	z-index: 2147483000;
+	background: #000;
+}
+
+.vr180-container:fullscreen {
+	background: #000;
+}
+
+.vr180-container.vr180-fullscreen .vr180-canvas,
+.vr180-container:fullscreen .vr180-canvas {
+	width: 100%;
+	height: 100%;
+	aspect-ratio: auto;
+}
+
+/* Older Safari (iPad) has its own name for :fullscreen. It needs its own rule: a browser that does
+   not know a selector ignores the whole rule. */
+.vr180-container:-webkit-full-screen .vr180-canvas {
+	width: 100%;
+	height: 100%;
+	aspect-ratio: auto;
+}
+
+/* The page cannot scroll behind the player's own full screen. */
+html.vr180-no-scroll,
+html.vr180-no-scroll body {
+	overflow: hidden;
 }
 
 /* Play button over the poster */
@@ -167,8 +207,8 @@ video[data-vr180],
 
 .vr180-controls {
 	display: grid;
-	grid-template-areas: "full lflex nav rflex quality mute";
-	grid-template-columns: 44px 1fr 156px 1fr auto 44px;
+	grid-template-areas: "full motion lflex nav rflex quality mute";
+	grid-template-columns: 44px auto 1fr 156px 1fr auto 44px;
 	align-items: center;
 	height: 44px;
 }
@@ -208,6 +248,22 @@ video[data-vr180],
 .vr180-play-pause.is-playing { background-image: url(images/pause.png); }
 .vr180-play-pause.is-playing:hover { background-image: url(images/pause-hover.png); }
 
+/* Motion control: a phone with curved arrows. It is white, and gets a ring when it is on. */
+.vr180-motion {
+	grid-area: motion;
+	border-radius: 50%;
+	background-size: 30px 30px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='11' y='7' width='8' height='16' rx='2'/%3E%3Cpath d='M7 11a9 9 0 0 0 0 8M23 11a9 9 0 0 1 0 8M5.5 18.5L7 19l.6-1.6M24.5 18.5L23 19l-.6-1.6'/%3E%3C/svg%3E");
+}
+
+.vr180-motion[hidden] {
+	display: none;
+}
+
+.vr180-motion.is-on {
+	box-shadow: inset 0 0 0 2px #fff;
+}
+
 /* The quality menu */
 .vr180-quality {
 	grid-area: quality;
@@ -237,3 +293,47 @@ video[data-vr180],
 .vr180-mute:hover { background-image: url(images/mute-hover.png); }
 .vr180-mute.is-muted { background-image: url(images/unmute.png); }
 .vr180-mute.is-muted:hover { background-image: url(images/unmute-hover.png); }
+
+/* Compact controls for a narrow player, for example on a phone. */
+@container (max-width: 480px) {
+	.vr180-panel {
+		box-sizing: border-box;
+		width: 94%;
+		padding: 10px 12px;
+		border-radius: 22px;
+	}
+
+	.vr180-status {
+		margin: 0 4px 8px 4px;
+	}
+
+	.vr180-title {
+		margin-bottom: 8px;
+		font-size: 0.875rem;
+	}
+
+	.vr180-controls {
+		grid-template-columns: 36px auto 1fr 116px 1fr auto 36px;
+		height: 36px;
+	}
+
+	.vr180-nav {
+		grid-template-columns: 36px 36px 36px;
+		gap: 4px;
+		height: 36px;
+	}
+
+	.vr180-button {
+		width: 36px;
+		height: 36px;
+		background-size: 36px 36px;
+	}
+
+	.vr180-motion {
+		background-size: 26px 26px;
+	}
+
+	.vr180-quality {
+		margin-right: 4px;
+	}
+}

@@ -76,7 +76,8 @@ player.destroy();
 | `xr-mode.js` | VR mode on a headset. |
 | `media-layer.js` | On the Quest, shows the video directly in the headset as a WebXR media layer, with no copy to the GPU. |
 | `vr-panel.js` | The control panel you see in VR. |
-| `flat-mode.js` | 2D mode on a normal screen, with drag to look around. |
+| `flat-mode.js` | 2D mode on a normal screen, with drag to look around, and full-screen sizing. |
+| `motion.js` | Motion control on phones and tablets: look around by turning the device. |
 | `dom-controls.js` | The control panel you see in 2D. |
 | `icons.js` | Icons for the VR panel. |
 | `three.js` | Loads Three.js, locked to one version. |
@@ -90,6 +91,11 @@ When the webpage loads, the video file is embeded normally, with a play button p
 
 **VR on Apple Vision Pro**
 ![vr](https://github.com/user-attachments/assets/c1097a4f-8712-4e6b-a233-a52d49cb261e)
+
+**In 2D on phones and tablets**
+- Tap the video to show or hide the controls. Drag to look around.
+- The full-screen button fills the whole screen. On iPhone, where a web page cannot use real full screen, the player covers the screen itself.
+- The motion button lets you look around by turning the device. On iPhone, the first tap asks for permission to use the motion sensor.
 
 **2D in Safari on Mac**
 

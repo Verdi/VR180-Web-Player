@@ -17,9 +17,10 @@ export const PROJECTIONS = {
 		rotationY: Math.PI / 2,
 		// The sphere part for a WebXR media layer (see media-layer.js).
 		mediaLayer: { centralHorizontalAngle: Math.PI, upperVerticalAngle: Math.PI / 2, lowerVerticalAngle: -Math.PI / 2 },
-		// How far the 2D view can turn before the edge of the video shows.
-		maxYaw: Math.PI / 4,
-		maxPitch: Math.PI / 4,
+		// How much of the sphere the video covers, side to side and top to bottom. The 2D view can turn
+		// until the edge of its picture reaches the edge of the video (see flat-mode.js).
+		horizontalExtent: Math.PI,
+		verticalExtent: Math.PI,
 	},
 };
 

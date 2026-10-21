@@ -54,8 +54,12 @@ export class DomControls {
 		this.quality.addEventListener('pointerdown', () => this.pin());
 		this.quality.addEventListener('focus', () => this.pin());
 
+		this.fullscreen = button('vr180-fullscreen', 'fullscreen', 'Full screen');
+		// Motion control: look around by turning the phone. Shown only on phones and tablets.
+		this.motion = button('vr180-motion', 'motion', 'Look around by moving the device');
+		this.motion.hidden = true;
 		const controls = element('div', 'vr180-controls');
-		controls.append(button('vr180-fullscreen', 'fullscreen', 'Full screen'), nav, this.quality, this.mute);
+		controls.append(this.fullscreen, this.motion, nav, this.quality, this.mute);
 
 		this.root.append(status, controls);
 		container.append(this.root);
@@ -86,6 +90,16 @@ export class DomControls {
 		this.root.classList.add('visible');
 	}
 
+	get isShown() {
+		return this.root.classList.contains('visible');
+	}
+
+	// Shows the panel if it is hidden, and hides it if it is shown.
+	toggle() {
+		if (this.isShown) this.hide();
+		else this.show();
+	}
+
 	hide() {
 		clearTimeout(this.hideTimer);
 		this.root.classList.remove('visible');
@@ -105,6 +119,17 @@ export class DomControls {
 		}
 		this.quality.hidden = qualities.length === 0;
 		if (this.quality.value !== current) this.quality.value = current;
+	}
+
+	setFullscreen(on) {
+		this.fullscreen.classList.toggle('is-on', on);
+		this.fullscreen.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+	}
+
+	setMotion(supported, on) {
+		this.motion.hidden = !supported;
+		this.motion.classList.toggle('is-on', on);
+		this.motion.setAttribute('aria-pressed', String(on));
 	}
 
 	setTitle(title) {
