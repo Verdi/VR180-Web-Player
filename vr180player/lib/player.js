@@ -9,6 +9,9 @@ import { createSource } from './source.js';
 import { StallGuard, bufferedAhead } from './stall-guard.js';
 import { motionSupported } from './motion.js';
 
+// The message between a player in an iframe and vr180-embed.js on the page around it.
+const FULLSCREEN_MESSAGE = 'vr180-fullscreen';
+
 const PLAY_ICON_URL = new URL('../images/play.png', import.meta.url).href;
 
 const DEFAULT_OPTIONS = {
@@ -148,11 +151,20 @@ export class VR180Player {
 		document.addEventListener('keydown', (event) => {
 			if (event.key === 'Escape' && this.container.classList.contains('vr180-fullscreen')) this.#setOwnFullscreen(false);
 		}, options);
+		// The page around an iframe can end the player's own full screen (see vr180-embed.js).
+		window.addEventListener('message', (event) => {
+			if (event.source !== window.parent || event.data?.type !== FULLSCREEN_MESSAGE) return;
+			if (!event.data.on && this.container.classList.contains('vr180-fullscreen')) this.#setOwnFullscreen(false);
+		}, options);
 	}
 
+	// The player's own full screen covers the window. In an iframe, the window is only the iframe,
+	// so the player also asks the page around it to make the iframe cover the screen. That page needs
+	// vr180-embed.js for this. Without it, nothing happens there, and the player fills the iframe.
 	#setOwnFullscreen(on) {
 		this.container.classList.toggle('vr180-fullscreen', on);
 		document.documentElement.classList.toggle('vr180-no-scroll', on);
+		if (window.parent !== window) window.parent.postMessage({ type: FULLSCREEN_MESSAGE, on }, '*');
 		this.syncUI();
 	}
 

@@ -55,6 +55,15 @@ In 2D, the player shows only the left-eye picture, so 2D viewers download the ri
 - With H.264, make the largest 2D size 3072×3072. That is the largest square that most devices can play in H.264. It looks sharp in full screen on a large monitor.
 - `tools/make-test-hls-2d.sh` shows how to make one with ffmpeg.
 
+### The player in an iframe
+If your page shows the player in an `<iframe>`, add this script to the page with the iframe (not to the page inside it):
+```
+<script src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.0/vr180player/vr180-embed.js"></script>
+```
+- On iPhone, a web page cannot use real full screen, so the player covers the window itself. In an iframe, that is only the iframe. With this script, the player can make its iframe cover the whole screen.
+- Give the iframe `allow="autoplay; fullscreen; xr-spatial-tracking; accelerometer; gyroscope"` and `allowfullscreen`, for VR, full screen, and motion control.
+- Do not put the iframe inside an element with a CSS `transform`, `filter`, or `perspective`. Then the iframe cannot cover the screen.
+
 ### Starting a player from JavaScript
 ```
 import { VR180Player } from 'https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.0/vr180player/vr180-player.js';
@@ -64,7 +73,7 @@ player.destroy();
 ```
 
 ## How the code is organized
-`vr180player/vr180-player.js` is the file you add to your page. It starts the players. The rest is in `vr180player/lib/`:
+`vr180player/vr180-player.js` is the file you add to your page. It starts the players. `vr180player/vr180-embed.js` is for a page that shows the player in an iframe. The rest is in `vr180player/lib/`:
 
 | File | What it does |
 | --- | --- |
@@ -82,7 +91,7 @@ player.destroy();
 | `icons.js` | Icons for the VR panel. |
 | `three.js` | Loads Three.js, locked to one version. |
 
-To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`.
+To test your changes, run `python3 tools/dev-server.py 8180` in this folder and open `http://localhost:8180/dev.html`. `dev-embed.html` tests the player in an iframe.
 
 `dev.html` also plays a 60-second HLS test stream with 3 qualities (8K, 6K, and 4K), in `test-media/hls/`, and in 2D a left-eye stream (3K, 2K, and 1K, H.264), in `test-media/hls-2d/`. `tools/make-test-hls-2d.sh` makes the 2D stream. To make it again from an 8192x4096 video (needs [ffmpeg](https://ffmpeg.org) on a Mac), run `tools/make-test-hls.sh path/to/video.mp4`.
 

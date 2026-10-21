@@ -5,3 +5,5 @@ poster.jpg export-ignore
 dev.html export-ignore
 tools export-ignore
 test-media export-ignore
+dev-frame.html export-ignore
+dev-embed.html export-ignore

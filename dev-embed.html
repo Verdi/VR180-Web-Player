@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>VR180 Web Player (iframe test)</title>
+	<!-- Local test page: the player in an iframe (dev-frame.html), with vr180-embed.js on this page, so full screen works on iPhone. -->
+	<style>
+		body { font-family: system-ui, sans-serif; margin: 0; }
+		main { max-width: 750px; margin: auto; padding: 16px; }
+		.player-box { position: relative; aspect-ratio: 16 / 9; background: #000; }
+		.player-box iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+	</style>
+</head>
+<body>
+	<main>
+		<h1>VR180 Web Player (iframe test)</h1>
+		<p>The player below is in an iframe. On iPhone, the full-screen button should fill the whole screen.</p>
+		<div class="player-box">
+			<iframe src="dev-frame.html" title="HLS player in an iframe"
+				allow="autoplay; fullscreen; xr-spatial-tracking; accelerometer; gyroscope" allowfullscreen></iframe>
+		</div>
+		<p>Text below the player, to check that the page does not scroll in full screen.</p>
+		<p style="height: 1200px">…</p>
+	</main>
+	<script src="vr180player/vr180-embed.js"></script>
+</body>
+</html>
