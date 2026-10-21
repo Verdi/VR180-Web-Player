@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>VR180 Web Player (iframe test, inside)</title>
+	<!-- The player page inside the iframe of dev-embed.html. It works like a video page on verdi.mov. -->
+	<link rel="stylesheet" href="vr180player/vr180-player.css">
+	<style>
+		html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+		body { display: flex; align-items: center; justify-content: center; }
+		.vr180-container { width: min(100vw, calc(100vh * 16 / 9)); }
+	</style>
+</head>
+<body>
+	<div class="vr180-container">
+		<video id="vr180" title="HLS player in an iframe" poster="poster.jpg" data-2d-src="test-media/hls-2d/master.m3u8" crossOrigin="anonymous" playsinline preload="none">
+			<source src="test-media/hls/master.m3u8" type="application/vnd.apple.mpegurl">
+		</video>
+	</div>
+	<script type="module" src="vr180player/vr180-player.js"></script>
+</body>
+</html>
