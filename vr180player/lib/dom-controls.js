@@ -86,6 +86,16 @@ export class DomControls {
 		this.root.classList.add('visible');
 	}
 
+	get isShown() {
+		return this.root.classList.contains('visible');
+	}
+
+	// Shows the panel if it is hidden, and hides it if it is shown.
+	toggle() {
+		if (this.isShown) this.hide();
+		else this.show();
+	}
+
 	hide() {
 		clearTimeout(this.hideTimer);
 		this.root.classList.remove('visible');

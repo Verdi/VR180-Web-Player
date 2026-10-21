@@ -7,6 +7,9 @@ const MOMENTUM_DAMPING = 0.8;
 const MIN_VELOCITY = 0.001;
 const ASPECT_RATIO = 16 / 9;
 const MIN_WIDTH = 320;
+// A touch that moves less than this, and ends within TAP_MAX_MS, is a tap, not a drag.
+const TAP_MAX_MOVE_PX = 10;
+const TAP_MAX_MS = 500;
 
 // Shows the video as a normal 2D view on the web page.
 // The viewer can drag the view to look around.
@@ -43,7 +46,7 @@ export class FlatMode {
 		canvas.addEventListener('pointerdown', (e) => this.#onPointerDown(e), options);
 		canvas.addEventListener('pointermove', (e) => this.#onPointerMove(e), options);
 		canvas.addEventListener('pointerup', (e) => this.#onPointerUp(e), options);
-		canvas.addEventListener('pointercancel', (e) => this.#onPointerUp(e), options);
+		canvas.addEventListener('pointercancel', (e) => this.#onPointerCancel(e), options);
 		this.resizeObserver = new ResizeObserver(() => this.#resize());
 		this.resizeObserver.observe(container);
 
@@ -88,10 +91,18 @@ export class FlatMode {
 		this.player.renderer.setSize(width, width / ASPECT_RATIO, false);
 	}
 
+	// A pointer that goes down on the view is a tap or a drag. It is a tap until it moves more than
+	// TAP_MAX_MOVE_PX. A tap shows or hides the controls. A drag turns the view, and never shows the
+	// controls: on a phone, the controls coming up after each drag were in the way.
 	#onPointerDown(event) {
 		if (this.drag || !event.isPrimary) return;
 		this.drag = {
 			id: event.pointerId,
+			type: event.pointerType,
+			startX: event.clientX,
+			startY: event.clientY,
+			startTime: performance.now(),
+			moved: false,
 			x: event.clientX,
 			y: event.clientY,
 			sensitivity: event.pointerType === 'touch' ? TOUCH_SENSITIVITY : MOUSE_SENSITIVITY,
@@ -103,7 +114,6 @@ export class FlatMode {
 			// The pointer is already gone. The drag still works inside the canvas.
 		}
 		this.velocity = { yaw: 0, pitch: 0 };
-		this.player.controls.hide();
 	}
 
 	#onPointerMove(event) {
@@ -112,6 +122,11 @@ export class FlatMode {
 			return;
 		}
 		if (event.pointerId !== this.drag.id) return;
+		const { drag } = this;
+		if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > TAP_MAX_MOVE_PX) {
+			drag.moved = true;
+			this.player.controls.hide();
+		}
 		this.velocity.yaw = (event.clientX - this.drag.x) * this.drag.sensitivity;
 		this.velocity.pitch = (event.clientY - this.drag.y) * this.drag.sensitivity;
 		this.drag.x = event.clientX;
@@ -119,8 +134,18 @@ export class FlatMode {
 	}
 
 	#onPointerUp(event) {
-		if (!this.drag || event.pointerId !== this.drag.id) return;
+		const { drag } = this;
+		if (!drag || event.pointerId !== drag.id) return;
 		this.drag = null;
-		this.player.controls.show();
+		const isTap = !drag.moved && performance.now() - drag.startTime < TAP_MAX_MS;
+		if (!isTap) return;
+		// A mouse shows the controls when it moves, so a click only shows them too.
+		if (drag.type === 'mouse') this.player.controls.show();
+		else this.player.controls.toggle();
+	}
+
+	// The browser took the pointer, for example for a page scroll or a system gesture.
+	#onPointerCancel(event) {
+		if (this.drag && event.pointerId === this.drag.id) this.drag = null;
 	}
 }
