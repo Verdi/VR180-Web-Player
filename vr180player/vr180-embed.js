@@ -7,7 +7,7 @@
 //   the player. This script reads it, and passes the readings to the player.
 //
 // Add it to the page that has the <iframe>:
-//   <script src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.1/vr180player/vr180-embed.js"></script>
+//   <script src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.2/vr180player/vr180-embed.js"></script>
 //
 // Note: the iframe covers the screen with position: fixed. That does not work inside an element with
 // a CSS transform, filter, or perspective, so do not put the iframe inside one.
