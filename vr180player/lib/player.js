@@ -8,6 +8,7 @@ import { XRMode, isXRSupported } from './xr-mode.js';
 import { createSource } from './source.js';
 import { StallGuard, bufferedAhead } from './stall-guard.js';
 import { motionSupported } from './motion.js';
+import { coverWholeScreen } from './viewport.js';
 
 // The message between a player in an iframe and vr180-embed.js on the page around it.
 const FULLSCREEN_MESSAGE = 'vr180-fullscreen';
@@ -165,6 +166,7 @@ export class VR180Player {
 		this.container.classList.toggle('vr180-fullscreen', on);
 		document.documentElement.classList.toggle('vr180-no-scroll', on);
 		if (window.parent !== window) window.parent.postMessage({ type: FULLSCREEN_MESSAGE, on }, '*');
+		else coverWholeScreen(on); // In an iframe, vr180-embed.js does this on the page around it.
 		this.syncUI();
 	}
 
