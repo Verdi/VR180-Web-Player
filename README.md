@@ -4,8 +4,8 @@ A web-based video player for 180 degree, 3D video.
 Got an immersive video you want people to see with the Apple Vision Pro or Meta Quest headsets? Now you can put it on your website just like any other video! People will see the immersive 3D video if they have a capable headset or they'll get a 2D version on other devices.
 
 ## How to use it
-1. Link to the player CSS file `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.1/vr180player/vr180-player.css">`.
-2. Add the player script `<script type="module" src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.1/vr180player/vr180-player.js"></script>` before the closing body tag.
+1. Link to the player CSS file `<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.2/vr180player/vr180-player.css">`.
+2. Add the player script `<script type="module" src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.2/vr180player/vr180-player.js"></script>` before the closing body tag.
 3. And use this HTML snippet to embed your video: 
 ```
 <div id="vr-container">
@@ -58,7 +58,7 @@ In 2D, the player shows only the left-eye picture, so 2D viewers download the ri
 ### The player in an iframe
 If your page shows the player in an `<iframe>`, add this script to the page with the iframe (not to the page inside it):
 ```
-<script src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.1/vr180player/vr180-embed.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.2/vr180player/vr180-embed.js"></script>
 ```
 - On iPhone, a web page cannot use real full screen, so the player covers the window itself. In an iframe, that is only the iframe. With this script, the player can make its iframe cover the whole screen.
 - On iPhone, Safari does not give the motion sensor to an iframe from another website. With this script, the page reads the sensor and passes the readings to the player. The permission question then names your page.
@@ -67,7 +67,7 @@ If your page shows the player in an `<iframe>`, add this script to the page with
 
 ### Starting a player from JavaScript
 ```
-import { VR180Player } from 'https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.1/vr180player/vr180-player.js';
+import { VR180Player } from 'https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.2/vr180player/vr180-player.js';
 const player = new VR180Player(document.querySelector('video'), { skipSeconds: 10 });
 // Later, to remove it (for example, when your page changes without a reload):
 player.destroy();
