@@ -7,6 +7,7 @@ import { FlatMode } from './flat-mode.js';
 import { XRMode, isXRSupported } from './xr-mode.js';
 import { createSource } from './source.js';
 import { StallGuard, bufferedAhead } from './stall-guard.js';
+import { motionSupported } from './motion.js';
 
 const PLAY_ICON_URL = new URL('../images/play.png', import.meta.url).href;
 
@@ -62,6 +63,7 @@ export class VR180Player {
 			onAction: (action, value) => this.runAction(action, value),
 		});
 		this.#listenToVideo();
+		this.#listenToFullscreen();
 		video.vr180Player = this;
 		this.xrReady = isXRSupported().then((supported) => {
 			this.xrSupported = supported;
@@ -102,11 +104,62 @@ export class VR180Player {
 		this.syncUI();
 	}
 
+	// True when the player fills the screen: real full screen, or the player's own full screen.
+	get isFullscreen() {
+		const element = document.fullscreenElement ?? document.webkitFullscreenElement;
+		return element === this.container || this.container.classList.contains('vr180-fullscreen');
+	}
+
+	// Full screen. Where the browser allows it (Android, computers, iPad), it is real full screen.
+	// Safari on iPhone allows real full screen only for a <video>, and then shows the raw video
+	// without the 2D view. So there, the player covers the whole screen itself.
 	toggleFullscreen() {
-		const request = document.fullscreenElement
-			? document.exitFullscreen()
-			: this.container.requestFullscreen?.();
-		request?.catch((err) => console.error('VR180Player: full screen failed:', err));
+		if (this.isFullscreen) {
+			this.#exitFullscreen();
+			return;
+		}
+		const { container } = this;
+		const request = container.requestFullscreen ?? container.webkitRequestFullscreen;
+		const enabled = document.fullscreenEnabled ?? document.webkitFullscreenEnabled;
+		if (request && enabled) {
+			Promise.resolve(request.call(container)).catch((err) => {
+				console.warn('VR180Player: real full screen failed, so the player covers the screen itself:', err);
+				this.#setOwnFullscreen(true);
+			});
+		} else {
+			this.#setOwnFullscreen(true);
+		}
+	}
+
+	#exitFullscreen() {
+		if (this.container.classList.contains('vr180-fullscreen')) {
+			this.#setOwnFullscreen(false);
+			return;
+		}
+		const exit = document.exitFullscreen ?? document.webkitExitFullscreen;
+		Promise.resolve(exit?.call(document)).catch((err) => console.error('VR180Player: could not leave full screen:', err));
+	}
+
+	#listenToFullscreen() {
+		const options = { signal: this.listeners.signal };
+		for (const type of ['fullscreenchange', 'webkitfullscreenchange']) {
+			document.addEventListener(type, () => this.syncUI(), options);
+		}
+		document.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape' && this.container.classList.contains('vr180-fullscreen')) this.#setOwnFullscreen(false);
+		}, options);
+	}
+
+	#setOwnFullscreen(on) {
+		this.container.classList.toggle('vr180-fullscreen', on);
+		document.documentElement.classList.toggle('vr180-no-scroll', on);
+		this.syncUI();
+	}
+
+	// Turns motion control on or off (2D on phones and tablets).
+	toggleMotion() {
+		if (this.mode !== this.flatMode) return;
+		this.flatMode.toggleMotion().then(() => this.syncUI());
 	}
 
 	// The qualities the viewer can choose, highest first, as [{ id, label }]. Empty if there is no choice.
@@ -146,6 +199,7 @@ export class VR180Player {
 			case 'mute': this.video.muted = !this.video.muted; break;
 			case 'seek': this.seekToFraction(value); break;
 			case 'fullscreen': this.toggleFullscreen(); break;
+			case 'motion': this.toggleMotion(); break;
 			case 'exit': this.stop(); break;
 			case 'quality': value === undefined ? this.nextQuality() : this.setQuality(value); break;
 			default: console.warn(`VR180Player: unknown action "${action}".`);
@@ -165,6 +219,7 @@ export class VR180Player {
 	reset() {
 		this.log('back to poster');
 		this.stallGuard.stop();
+		if (this.isFullscreen) this.#exitFullscreen();
 		if (this.mode === this.flatMode) this.flatMode.stop();
 		this.mode = null;
 		this.controls.hide();
@@ -244,6 +299,8 @@ export class VR180Player {
 
 	syncUI() {
 		this.controls.setQualities(this.qualities, this.source?.quality ?? 'auto');
+		this.controls.setFullscreen(this.isFullscreen);
+		this.controls.setMotion(motionSupported(), Boolean(this.flatMode?.motion.enabled));
 		this.vrPanel?.setQualityLabel(this.qualityLabel());
 		this.controls.update(this.video);
 		if (this.options.debug) this.controls.setTitle(this.debugTitle());
@@ -253,6 +310,7 @@ export class VR180Player {
 	// Removes the player and frees its WebGL resources. The <video> element stays.
 	destroy() {
 		if (this.mode) this.stop();
+		if (this.container.classList.contains('vr180-fullscreen')) this.#setOwnFullscreen(false);
 		this.listeners.abort();
 		this.videoListeners.abort();
 		this.controls.destroy();
