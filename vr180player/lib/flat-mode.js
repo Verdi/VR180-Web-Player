@@ -1,6 +1,6 @@
 import * as THREE from './three.js';
 import { LEFT_EYE_LAYER } from './video-screen.js';
-import { MotionControl, requestMotionPermission } from './motion.js';
+import { MotionControl, requestMotionPermission, inOtherSiteFrame } from './motion.js';
 
 const MOUSE_SENSITIVITY = 0.002;
 const TOUCH_SENSITIVITY = 0.003;
@@ -33,6 +33,7 @@ export class FlatMode {
 		this.camera.layers.enable(LEFT_EYE_LAYER);
 		this.camera.rotation.order = 'YXZ'; // Turn side to side first, then up and down, as a head does.
 		this.motion = new MotionControl();
+		this.motion.onStop = () => this.player.syncUI();
 		this.rotation = { yaw: 0, pitch: 0 };
 		this.velocity = { yaw: 0, pitch: 0 };
 		this.drag = null;
@@ -96,6 +97,10 @@ export class FlatMode {
 		if (this.motion.enabled) {
 			this.motion.stop();
 			return false;
+		}
+		if (inOtherSiteFrame()) {
+			this.motion.startFromPage(); // The page around the iframe asks for permission.
+			return true;
 		}
 		if (!(await requestMotionPermission())) return false;
 		this.motion.start();

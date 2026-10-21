@@ -15,7 +15,7 @@
 <body>
 	<main>
 		<h1>VR180 Web Player (iframe test)</h1>
-		<p>The player below is in an iframe. On iPhone, the full-screen button should fill the whole screen.</p>
+		<p>The player below is in an iframe. On iPhone, the full-screen button should fill the whole screen, and the motion button should work. On the local test server, <code>?othersite</code> loads the iframe from another website.</p>
 		<div class="player-box">
 			<iframe src="dev-frame.html" title="HLS player in an iframe"
 				allow="autoplay; fullscreen; xr-spatial-tracking; accelerometer; gyroscope" allowfullscreen></iframe>
@@ -23,6 +23,13 @@
 		<p>Text below the player, to check that the page does not scroll in full screen.</p>
 		<p style="height: 1200px">…</p>
 	</main>
+	<script>
+		// ?othersite loads the iframe from another website, like an embed on another site. On the local
+		// test server, localhost and 127.0.0.1 are two websites to the browser.
+		if (new URLSearchParams(location.search).has('othersite') && location.hostname === 'localhost') {
+			document.querySelector('iframe').src = `http://127.0.0.1:${location.port}/dev-frame.html`;
+		}
+	</script>
 	<script src="vr180player/vr180-embed.js"></script>
 </body>
 </html>

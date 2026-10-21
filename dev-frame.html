@@ -19,5 +19,25 @@
 		</video>
 	</div>
 	<script type="module" src="vr180player/vr180-player.js"></script>
+	<script>
+		// Test hook for automated tests of dev-embed.html: the page around the iframe can press a
+		// player button ({ type: 'dev-action', action }) and ask for the view direction ({ type: 'dev-state' }).
+		addEventListener('message', (event) => {
+			const player = document.getElementById('vr180')?.vr180Player;
+			if (!player) return;
+			if (event.data?.type === 'dev-action') player.runAction(event.data.action);
+			if (event.data?.type === 'dev-state') {
+				const camera = player.flatMode?.camera;
+				const degrees = (radians) => Math.round(radians * 180 / Math.PI);
+				event.source.postMessage({
+					type: 'dev-state-reply',
+					motion: Boolean(player.flatMode?.motion.enabled),
+					yaw: camera ? degrees(camera.rotation.y) : null,
+					pitch: camera ? degrees(camera.rotation.x) : null,
+					fullscreen: player.isFullscreen,
+				}, '*');
+			}
+		});
+	</script>
 </body>
 </html>

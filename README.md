@@ -61,6 +61,7 @@ If your page shows the player in an `<iframe>`, add this script to the page with
 <script src="https://cdn.jsdelivr.net/gh/Verdi/VR180-Web-Player@v1.4.1/vr180player/vr180-embed.js"></script>
 ```
 - On iPhone, a web page cannot use real full screen, so the player covers the window itself. In an iframe, that is only the iframe. With this script, the player can make its iframe cover the whole screen.
+- On iPhone, Safari does not give the motion sensor to an iframe from another website. With this script, the page reads the sensor and passes the readings to the player. The permission question then names your page.
 - Give the iframe `allow="autoplay; fullscreen; xr-spatial-tracking; accelerometer; gyroscope"` and `allowfullscreen`, for VR, full screen, and motion control.
 - Do not put the iframe inside an element with a CSS `transform`, `filter`, or `perspective`. Then the iframe cannot cover the screen.
 
